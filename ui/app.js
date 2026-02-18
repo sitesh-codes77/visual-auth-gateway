@@ -34,6 +34,16 @@ const els = {
   adminOutput: document.getElementById('admin-output')
 };
 
+
+function syncUserFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = (params.get('userId') || '').trim();
+  if (fromQuery) {
+    state.userId = fromQuery;
+    els.userId.value = fromQuery;
+  }
+}
+
 function setStatus(message, isError = false) {
   els.status.textContent = message;
   els.status.classList.toggle('error', isError);
@@ -276,6 +286,8 @@ els.loadPasswords.addEventListener('click', async () => {
 });
 
 (async () => {
+  syncUserFromQuery();
+
   try {
     const slotData = await apiJson('/api/time-slot');
     els.slotIndicator.textContent = slotData.timeSlot.toUpperCase();

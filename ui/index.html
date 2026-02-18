@@ -7,12 +7,23 @@
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
+    <div class="bg-glow glow-one"></div>
+    <div class="bg-glow glow-two"></div>
+
     <main class="container">
       <section class="card">
-        <h1>Visual Authentication SaaS</h1>
-        <p class="muted">Time-based multi-password authentication with AI hints.</p>
+        <header class="hero">
+          <p class="eyebrow">VisualAuth Cloud Gateway</p>
+          <h1>Visual Authentication SaaS</h1>
+          <p class="muted">Time-based multi-password authentication with AI-powered memory hints.</p>
+          <div class="hero-badges">
+            <span class="badge">⏱ 60s Session TTL</span>
+            <span class="badge">🧠 Edge AI Hints</span>
+            <span class="badge">🔐 Passkey Fallback</span>
+          </div>
+        </header>
 
-        <form id="auth-form" class="stack">
+        <form id="auth-form" class="stack form-panel">
           <label>
             User ID
             <input id="user-id" name="userId" value="U123" required />
@@ -32,28 +43,29 @@
         </form>
 
         <div id="challenge" class="hidden stack">
-          <div class="row">
-            <span>Current slot:</span>
-            <strong id="slot-indicator">-</strong>
-            <span id="session-timer">60s</span>
+          <div class="row status-bar">
+            <span>Current slot: <strong id="slot-indicator">-</strong></span>
+            <span class="ttl-pill">Session <strong id="session-timer">60s</strong></span>
           </div>
 
-          <div>
-            <h3>Visual Pattern</h3>
-            <p class="muted">Tap emojis in order:</p>
-            <div id="pattern-pool" class="pattern-pool"></div>
-            <div id="selected-pattern" class="selected-pattern"></div>
-            <button id="clear-pattern" type="button" class="ghost">Clear</button>
-          </div>
+          <div class="challenge-grid">
+            <section class="panel stack">
+              <h3>Visual Pattern Challenge</h3>
+              <p class="muted">Tap emojis in the exact order for your active time slot.</p>
+              <div id="pattern-pool" class="pattern-pool"></div>
+              <div id="selected-pattern" class="selected-pattern"></div>
+              <button id="clear-pattern" type="button" class="ghost">Clear Selection</button>
+            </section>
 
-          <div>
-            <h3>AI Hint Panel</h3>
-            <p id="hint-sentence" class="hint-box"></p>
-            <div class="hint-actions">
-              <button id="hint-btn" type="button" class="ghost">Give me a hint</button>
-              <span id="hint-level">Level 0 / 3</span>
-            </div>
-            <canvas id="matrix-canvas" width="320" height="320" aria-label="Character matrix"></canvas>
+            <section class="panel stack">
+              <h3>AI Hint Engine</h3>
+              <p id="hint-sentence" class="hint-box"></p>
+              <div class="hint-actions">
+                <button id="hint-btn" type="button" class="ghost">Give me a hint</button>
+                <span id="hint-level" class="hint-chip">Level 0 / 3</span>
+              </div>
+              <canvas id="matrix-canvas" width="320" height="320" aria-label="Character matrix"></canvas>
+            </section>
           </div>
 
           <div class="actions">
@@ -64,7 +76,7 @@
         </div>
 
         <section class="stack admin-panel">
-          <h2>Admin/Demo Tools</h2>
+          <h2>Admin / Demo Tools</h2>
           <button id="load-passwords" type="button" class="ghost">View all user passwords</button>
           <pre id="admin-output"></pre>
         </section>
