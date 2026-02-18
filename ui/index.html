@@ -1,90 +1,125 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>VisualAuth SaaS</title>
-    <link rel="stylesheet" href="/style.css" />
-  </head>
-  <body>
-    <div class="bg-glow glow-one"></div>
-    <div class="bg-glow glow-two"></div>
 
-    <main class="container">
-      <section class="card">
-        <header class="hero">
-          <p class="eyebrow">VisualAuth Cloud Gateway</p>
-          <h1>Visual Authentication SaaS</h1>
-          <p class="muted">Time-based multi-password authentication with AI-powered memory hints.</p>
-          <div class="hero-badges">
-            <span class="badge">⏱ 60s Session TTL</span>
-            <span class="badge">🧠 Edge AI Hints</span>
-            <span class="badge">🔐 Passkey Fallback</span>
-          </div>
-        </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartShield • Secure Access</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/style.css" />
+</head>
 
-        <form id="auth-form" class="stack form-panel">
+<body>
+  <main class="container">
+    <section class="card">
+      <header class="hero">
+        <span class="eyebrow">SmartShield Security Layer v4.2</span>
+        <h1>Identity Verification</h1>
+        <p class="muted">Access to Astra Bank systems requires secondary visual pattern authentication. Please identify
+          your secure emoji sequence.</p>
+
+        <div class="hero-badges">
+          <span class="badge"><i class="fas fa-clock"></i> 60s Session</span>
+          <span class="badge"><i class="fas fa-brain"></i> Neural Link</span>
+          <span class="badge"><i class="fas fa-fingerprint"></i> Biometric Req</span>
+        </div>
+      </header>
+
+      <form id="auth-form" class="stack form-panel">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
           <label>
-            User ID
+            Operator ID
             <input id="user-id" name="userId" value="U123" required />
           </label>
 
           <label>
-            Time Slot Override (Demo)
+            Temporal Window
             <select id="time-slot-override" name="timeSlotOverride">
-              <option value="">Auto detect</option>
-              <option value="morning">Morning</option>
-              <option value="evening">Evening</option>
-              <option value="night">Night</option>
+              <option value="">Auto Detect (Live)</option>
+              <option value="morning">Morning Cycle</option>
+              <option value="evening">Evening Cycle</option>
+              <option value="night">Night Cycle</option>
             </select>
           </label>
-
-          <button type="submit">Start Authentication</button>
-        </form>
-
-        <div id="challenge" class="hidden stack">
-          <div class="row status-bar">
-            <span>Current slot: <strong id="slot-indicator">-</strong></span>
-            <span class="ttl-pill">Session <strong id="session-timer">60s</strong></span>
-          </div>
-
-          <div class="challenge-grid">
-            <section class="panel stack">
-              <h3>Visual Pattern Challenge</h3>
-              <p class="muted">Tap emojis in the exact order for your active time slot.</p>
-              <div id="pattern-pool" class="pattern-pool"></div>
-              <div id="selected-pattern" class="selected-pattern"></div>
-              <button id="clear-pattern" type="button" class="ghost">Clear Selection</button>
-            </section>
-
-            <section class="panel stack">
-              <h3>AI Hint Engine</h3>
-              <p id="hint-sentence" class="hint-box"></p>
-              <div class="hint-actions">
-                <button id="hint-btn" type="button" class="ghost">Give me a hint</button>
-                <span id="hint-level" class="hint-chip">Level 0 / 3</span>
-              </div>
-              <canvas id="matrix-canvas" width="320" height="320" aria-label="Character matrix"></canvas>
-            </section>
-          </div>
-
-          <div class="actions">
-            <button id="verify-visual" type="button">Verify Visual Password</button>
-            <button id="webauthn-login" type="button" class="ghost">Try Passkey (WebAuthn)</button>
-            <button id="face-id" type="button" class="ghost">Face ID Demo</button>
-          </div>
         </div>
 
-        <section class="stack admin-panel">
-          <h2>Admin / Demo Tools</h2>
-          <button id="load-passwords" type="button" class="ghost">View all user passwords</button>
-          <pre id="admin-output"></pre>
-        </section>
+        <button type="submit" style="margin-top: 1rem;">
+          <span>Initialize Security Session</span>
+          <i class="fas fa-unlock-keyhole"></i>
+        </button>
+      </form>
 
-        <p id="status" role="status"></p>
+      <div id="challenge" class="hidden stack">
+        <div class="status-bar">
+          <span>Terminal Slot: <strong id="slot-indicator" style="color: var(--accent-blue);">-</strong></span>
+          <span class="ttl-pill">SESSION ACTIVE: <strong id="session-timer">60s</strong></span>
+        </div>
+
+        <div class="challenge-grid">
+          <section class="panel stack">
+            <h3><i class="fas fa-grip"></i> Pattern Challenge</h3>
+            <p class="muted" style="font-size: 0.85rem;">Input your temporal multi-password sequence using the grid
+              below.</p>
+
+            <div id="pattern-pool" class="pattern-pool"></div>
+
+            <div class="stack" style="gap: 0.5rem; margin-top: 0.5rem;">
+              <label style="font-size: 0.75rem;">Selected Sequence</label>
+              <div id="selected-pattern" class="selected-pattern"></div>
+            </div>
+
+            <button id="clear-pattern" type="button" class="ghost">
+              <i class="fas fa-eraser"></i>
+              <span>Reset Input</span>
+            </button>
+          </section>
+
+          <section class="panel stack">
+            <h3><i class="fas fa-microchip"></i> AI Trace Engine</h3>
+            <p id="hint-sentence" class="hint-box">Trace engine initialized. Waiting for prompt...</p>
+
+            <div class="hint-actions">
+              <button id="hint-btn" type="button" class="ghost" style="flex: 1;">
+                <i class="fas fa-wand-magic-sparkles"></i>
+                <span>Request Trace Hint</span>
+              </button>
+              <span id="hint-level" class="badge" style="margin-left: 0.5rem;">TRC Lvl: 0/3</span>
+            </div>
+
+            <canvas id="matrix-canvas" width="320" height="320" aria-label="Character matrix"></canvas>
+          </section>
+        </div>
+
+        <div class="actions">
+          <button id="verify-visual" type="button">
+            <i class="fas fa-shield-check"></i>
+            <span>Verify Pattern</span>
+          </button>
+          <button id="webauthn-login" type="button" class="ghost">
+            <i class="fas fa-key"></i>
+            <span>Passkey</span>
+          </button>
+          <button id="face-id" type="button" class="ghost">
+            <i class="fas fa-face-viewfinder"></i>
+            <span>Face ID</span>
+          </button>
+        </div>
+      </div>
+
+      <section class="stack admin-panel">
+        <h2><i class="fas fa-terminal"></i> Security Logs</h2>
+        <button id="load-passwords" type="button" class="ghost"
+          style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">
+          <span>Decrypt User Vault</span>
+        </button>
+        <pre id="admin-output"></pre>
       </section>
-    </main>
 
-    <script src="/app.js"></script>
-  </body>
+      <p id="status" role="status"></p>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+
 </html>

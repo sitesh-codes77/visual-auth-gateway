@@ -3,7 +3,7 @@ const state = {
   challengeId: null,
   timeSlot: null,
   selectedPattern: [],
-  visualPattern: [],
+  visualPattern: ['🌅', '🌞', '🌻', '🌇', '🌆', '🌉', '🌙', '⭐', '🌠'],
   hintLevel: 0,
   maxHintLevel: 3,
   timerHandle: null,
@@ -55,8 +55,14 @@ function setStatus(message, isError = false) {
   els.status.classList.toggle('error', isError);
 }
 
-function shuffle(input) {
-  return [...input].sort(() => Math.random() - 0.5);
+function shuffle(array) {
+  let currentIndex = array.length, randomIndex;
+  while (currentIndex !== 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+  }
+  return array;
 }
 
 function drawMatrix(size, highlights = []) {
@@ -80,7 +86,7 @@ function drawMatrix(size, highlights = []) {
       ctx.strokeRect(x, y, cell, cell);
 
       if (isHighlight) {
-        ctx.fillStyle = 'rgba(110, 231, 183, 0.28)';
+        ctx.fillStyle = 'rgba(14, 165, 233, 0.28)';
         ctx.fillRect(x + 1, y + 1, cell - 2, cell - 2);
       }
 
@@ -119,11 +125,25 @@ function renderPatternPool() {
     btn.className = 'emoji-btn';
     btn.textContent = emoji;
     btn.setAttribute('aria-pressed', 'false');
-    btn.addEventListener('click', () => {
-      if (state.selectedPattern.length >= state.visualPattern.length) return;
-      state.selectedPattern.push(emoji);
+
+    // Disable if 3 items already selected
+    if (state.selectedPattern.length >= 3) {
+      btn.disabled = true;
+    }
+
+    // Highlight if selected
+    if (state.selectedPattern.includes(emoji)) {
+      btn.classList.add('active');
       btn.setAttribute('aria-pressed', 'true');
+    }
+
+    btn.addEventListener('click', () => {
+      if (state.selectedPattern.length >= 3) return;
+      if (state.selectedPattern.includes(emoji)) return; // Prevent double click
+
+      state.selectedPattern.push(emoji);
       renderSelectedPattern();
+      renderPatternPool(); // Re-render to disable other buttons
     });
     els.patternPool.appendChild(btn);
   });
@@ -134,7 +154,8 @@ function renderSelectedPattern() {
   state.selectedPattern.forEach((emoji, index) => {
     const chip = document.createElement('div');
     chip.className = 'emoji-pill';
-    chip.textContent = `${index + 1}. ${emoji}`;
+    chip.textContent = emoji;
+    chip.title = `Step ${index + 1}`;
     els.selectedPattern.appendChild(chip);
   });
 }
@@ -175,7 +196,8 @@ els.authForm.addEventListener('submit', async (event) => {
 
     state.challengeId = data.challengeId;
     state.timeSlot = data.timeSlot;
-    state.visualPattern = data.visualPattern;
+    // We keep our fixed 9 emoji pool but verify against what the server sends
+    // The server currently sends 3 emojis for the correct pattern
     state.selectedPattern = [];
     state.hintLevel = 0;
     state.maxHintLevel = data.hints.max;
@@ -185,7 +207,7 @@ els.authForm.addEventListener('submit', async (event) => {
 
     els.slotIndicator.textContent = data.timeSlot.toUpperCase();
     els.hintSentence.textContent = data.sentence;
-    els.hintLevel.textContent = `Level ${state.hintLevel} / ${state.maxHintLevel}`;
+    els.hintLevel.textContent = `TRC Lvl: ${state.hintLevel}/${state.maxHintLevel}`;
     els.challenge.classList.remove('hidden');
 
     drawMatrix(state.matrixSize);
@@ -193,7 +215,7 @@ els.authForm.addEventListener('submit', async (event) => {
     renderSelectedPattern();
     startTimer();
 
-    setStatus('Challenge active. Select visual pattern or use fallback methods.');
+    setStatus('Challenge active. Select visual pattern sequence (3 emojis).');
   } catch (error) {
     setStatus(error.message, true);
   }
@@ -234,6 +256,11 @@ els.hintBtn.addEventListener('click', async () => {
 
 els.verifyVisual.addEventListener('click', async () => {
   try {
+    if (state.selectedPattern.length < 3) {
+      setStatus('Please select exactly 3 emojis.', true);
+      return;
+    }
+
     const data = await apiJson('/api/auth/verify-visual', {
       method: 'POST',
       body: JSON.stringify({ pattern: state.selectedPattern })
@@ -243,6 +270,10 @@ els.verifyVisual.addEventListener('click', async () => {
     window.location.href = data.redirectUrl;
   } catch (error) {
     setStatus(error.message, true);
+    // Shuffle and reset after failure
+    state.selectedPattern = [];
+    renderSelectedPattern();
+    renderPatternPool();
   }
 });
 

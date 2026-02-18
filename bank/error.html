@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Astra Bank • Access Denied</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@700&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #020617;
+            --card: #0f172a;
+            --red: #ef4444;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --border: rgba(239, 68, 68, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 1.5rem;
+            background-image:
+                radial-gradient(circle at 50% 50%, rgba(239, 68, 68, 0.05), transparent 70%);
+        }
+
+        .error-card {
+            max-width: 550px;
+            width: 100%;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 4rem 3rem;
+            text-align: center;
+            box-shadow: 0 0 100px rgba(239, 68, 68, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .error-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--red);
+        }
+
+        .icon-box {
+            width: 100px;
+            height: 100px;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            margin: 0 auto 2.5rem;
+            color: var(--red);
+            font-size: 3rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+
+            70% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 20px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        h1 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 2rem;
+            margin: 0 0 1rem;
+            color: #fff;
+            letter-spacing: -0.02em;
+        }
+
+        p {
+            color: var(--muted);
+            line-height: 1.6;
+            margin-bottom: 2.5rem;
+            font-size: 1.05rem;
+        }
+
+        .security-details {
+            background: #000;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 2.5rem;
+            text-align: left;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .detail-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-label {
+            color: #64748b;
+        }
+
+        .detail-value {
+            color: var(--red);
+            font-weight: 700;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            width: 100%;
+            padding: 1.125rem;
+            background: var(--red);
+            color: white;
+            text-decoration: none;
+            border-radius: 14px;
+            font-weight: 700;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .footer {
+            margin-top: 2.5rem;
+            font-size: 0.75rem;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="error-card">
+        <div class="icon-box">
+            <i class="fas fa-triangle-exclamation"></i>
+        </div>
+        <h1>Authentication Failed</h1>
+        <p>Your access has been blocked for security reasons. Our systems detected suspicious activity or too many
+            failed authentication attempts on your account.</p>
+
+        <div class="security-details">
+            <div class="detail-row">
+                <span class="detail-label">INCIDENT ID:</span>
+                <span class="detail-value" id="ref-id">SEC-4929-AX</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">PROTOCOL:</span>
+                <span class="detail-value">ASTRA-SEC-403</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">STATUS:</span>
+                <span class="detail-value">ACCOUNT_LOCKED</span>
+            </div>
+        </div>
+
+        <a href="/index.html" class="btn">
+            <i class="fas fa-rotate-left"></i>
+            <span>Return to Secure Home</span>
+        </a>
+
+        <div class="footer">
+            Astra Security Operations Center &bull; Zero Trust Policy
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('ref-id').textContent = 'SEC-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    </script>
+</body>
+
+</html>
