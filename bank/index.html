@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Demo Bank - Login</title>
+    <style>
+      body { font-family: Arial, sans-serif; background: #0f172a; color: #f8fafc; display:grid; place-items:center; min-height:100vh; margin:0; }
+      .card { background:#111827; border:1px solid #334155; border-radius:12px; padding:1.2rem; width:min(520px,95vw); }
+      button { background:#22c55e; color:#03210e; border:none; border-radius:10px; padding:.7rem 1rem; font-weight:700; cursor:pointer; width:100%; }
+      .muted { color:#cbd5e1; }
+    </style>
+  </head>
+  <body>
+    <section class="card">
+      <h1>Demo Bank Portal</h1>
+      <p class="muted">This client redirects authentication to VisualAuth SaaS based on current time slot policy.</p>
+      <button id="login">Login with VisualAuth SaaS</button>
+      <p id="status"></p>
+    </section>
+
+    <script>
+      const statusEl = document.getElementById('status');
+      document.getElementById('login').addEventListener('click', () => {
+        statusEl.textContent = 'Redirecting to SaaS...';
+        const userId = 'U123';
+        window.location.href = `http://localhost:3000/?userId=${encodeURIComponent(userId)}`;
+      });
+    </script>
+  </body>
+</html>

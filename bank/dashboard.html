@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bank Dashboard</title>
+    <style>
+      body{font-family:Arial,sans-serif;background:#0f172a;color:#f8fafc;margin:0;padding:1rem;}
+      .wrap{max-width:900px;margin:0 auto;}
+      .panel{background:#111827;border:1px solid #334155;border-radius:12px;padding:1rem;margin-bottom:1rem;}
+      table{width:100%;border-collapse:collapse;}
+      th,td{border-bottom:1px solid #334155;padding:.55rem;text-align:left;font-size:.95rem;}
+      .ok{color:#22c55e;font-weight:700;}
+      .bad{color:#fb7185;font-weight:700;}
+      button{background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:.6rem .8rem;cursor:pointer;}
+      a{color:#67e8f9;}
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section class="panel">
+        <h1>Bank Dashboard</h1>
+        <p id="welcome"></p>
+        <button id="refresh">Refresh Auth History</button>
+        <p><a href="/index.html">Back to bank login</a></p>
+      </section>
+
+      <section class="panel">
+        <h2>Authentication History</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Time Slot</th>
+              <th>Method</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody id="history"></tbody>
+        </table>
+      </section>
+    </div>
+
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const userId = params.get('userId') || 'U123';
+      document.getElementById('welcome').textContent = `Welcome ${userId}.`; 
+
+      async function loadHistory() {
+        const historyEl = document.getElementById('history');
+        historyEl.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+        try {
+          const resp = await fetch(`/api/auth-history/${encodeURIComponent(userId)}`);
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Failed to load history');
+
+          historyEl.innerHTML = data.logs.length
+            ? data.logs.map((log) => `
+                <tr>
+                  <td>${new Date(log.timestamp).toLocaleString()}</td>
+                  <td>${log.timeSlot}</td>
+                  <td>${log.method}</td>
+                  <td class="${log.success ? 'ok' : 'bad'}">${log.success ? 'PASS' : 'FAIL'}</td>
+                </tr>
+              `).join('')
+            : '<tr><td colspan="4">No authentication history available.</td></tr>';
+        } catch (error) {
+          historyEl.innerHTML = `<tr><td colspan="4">${error.message}</td></tr>`;
+        }
+      }
+
+      document.getElementById('refresh').addEventListener('click', loadHistory);
+      loadHistory();
+    </script>
+  </body>
+</html>

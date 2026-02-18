@@ -1,0 +1,32 @@
+{
+  "name": "visual-auth-gateway-saas",
+  "version": "1.0.0",
+  "description": "Full-stack Visual Authentication SaaS with time-based multi-passwords and edge AI hints",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js",
+    "test": "node --test"
+  },
+  "keywords": [
+    "visual-auth",
+    "saas",
+    "webauthn",
+    "sqlite",
+    "edge-ai"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@simplewebauthn/server": "^10.0.1",
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
