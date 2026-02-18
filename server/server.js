@@ -3,6 +3,8 @@ const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
 const session = require('express-session');
+const speakeasy = require('speakeasy');
+const QRCode = require('qrcode');
 const {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -34,6 +36,18 @@ function slotFromDate(date = new Date()) {
 
 function validateUserId(userId) {
   return typeof userId === 'string' && /^[A-Za-z0-9_-]{2,32}$/.test(userId);
+}
+
+
+function sanitizeReturnUrl(returnUrl) {
+  if (!returnUrl) return '';
+  try {
+    const parsed = new URL(returnUrl);
+    const allowedOrigin = `http://localhost:${BANK_PORT}`;
+    return parsed.origin === allowedOrigin ? parsed.toString() : '';
+  } catch (_error) {
+    return '';
+  }
 }
 
 function sanitizePattern(input) {
@@ -74,6 +88,10 @@ function createSaaSApp() {
   );
   app.use(express.static(path.join(__dirname, '../ui')));
 
+  app.get('/', (_req, res) => {
+    res.sendFile(path.join(__dirname, '../ui/index.html'));
+  });
+
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, service: 'visualauth-saas' });
   });
@@ -96,6 +114,7 @@ function createSaaSApp() {
     try {
       const userId = String(req.body.userId || '');
       const requestedSlot = req.body.timeSlot;
+      const returnUrl = sanitizeReturnUrl(String(req.body.returnUrl || '').trim());
       if (!validateUserId(userId)) {
         return res.status(400).json({ error: 'Invalid userId format.' });
       }
@@ -123,7 +142,8 @@ function createSaaSApp() {
         timeSlot,
         passwordId: parsed.id,
         attempts: 0,
-        expiresAt
+        expiresAt,
+        returnUrl
       };
 
       const hints = {
@@ -213,7 +233,9 @@ function createSaaSApp() {
         timestamp: new Date().toISOString()
       };
       req.session.authChallenge = null;
-      return res.json({ success: true, redirectUrl: `http://localhost:${BANK_PORT}/dashboard.html?userId=${challenge.userId}` });
+      const fallbackRedirect = `http://localhost:${BANK_PORT}/dashboard.html?userId=${challenge.userId}`;
+      const redirectUrl = challenge.returnUrl || fallbackRedirect;
+      return res.json({ success: true, redirectUrl });
     }
 
     challenge.attempts += 1;
@@ -342,6 +364,109 @@ function createSaaSApp() {
     } catch (error) {
       return res.status(400).json({ verified: false, error: 'WebAuthn verification failed.' });
     }
+  });
+
+
+
+  app.post('/api/totp/setup', async (req, res) => {
+    try {
+      const userId = String(req.body.userId || '');
+      if (!validateUserId(userId)) return res.status(400).json({ error: 'Invalid userId.' });
+
+      const user = db.getUser(userId);
+      if (!user) return res.status(404).json({ error: 'User not found.' });
+
+      const secret = speakeasy.generateSecret({
+        name: `VisualAuth (${user.userId})`,
+        issuer: 'VisualAuth SaaS',
+        length: 32
+      });
+
+      db.upsertTotpSecret({
+        userId,
+        secretBase32: secret.base32,
+        otpauthUrl: secret.otpauth_url,
+        enabled: 0
+      });
+
+      const qrDataUrl = await QRCode.toDataURL(secret.otpauth_url);
+      return res.json({
+        userId,
+        secretBase32: secret.base32,
+        otpauthUrl: secret.otpauth_url,
+        qrDataUrl,
+        enabled: false
+      });
+    } catch (error) {
+      return res.status(500).json({ error: 'Unable to create TOTP secret.' });
+    }
+  });
+
+  app.post('/api/totp/enable', (req, res) => {
+    const userId = String(req.body.userId || '');
+    const token = String(req.body.token || '').trim();
+
+    if (!validateUserId(userId)) return res.status(400).json({ error: 'Invalid userId.' });
+    if (!/^\d{6}$/.test(token)) return res.status(400).json({ error: 'Token must be a 6-digit code.' });
+
+    const totp = db.getTotpSecret(userId);
+    if (!totp) return res.status(404).json({ error: 'TOTP is not initialized for this user.' });
+
+    const verified = speakeasy.totp.verify({
+      secret: totp.secretBase32,
+      encoding: 'base32',
+      token,
+      window: 1
+    });
+
+    if (!verified) {
+      db.logAuth({ userId, timeSlot: slotFromDate(), success: false, method: 'totp' });
+      return res.status(401).json({ enabled: false, error: 'Invalid authenticator code.' });
+    }
+
+    db.enableTotp(userId);
+    db.logAuth({ userId, timeSlot: slotFromDate(), success: true, method: 'totp-setup' });
+    return res.json({ enabled: true });
+  });
+
+  app.post('/api/totp/verify', (req, res) => {
+    const userId = String(req.body.userId || '');
+    const token = String(req.body.token || '').trim();
+    const returnUrl = sanitizeReturnUrl(String(req.body.returnUrl || '').trim());
+
+    if (!validateUserId(userId)) return res.status(400).json({ error: 'Invalid userId.' });
+    if (!/^\d{6}$/.test(token)) return res.status(400).json({ error: 'Token must be a 6-digit code.' });
+
+    const totp = db.getTotpSecret(userId);
+    if (!totp || !totp.enabled) {
+      return res.status(400).json({ error: 'TOTP is not enabled. Setup required first.' });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: totp.secretBase32,
+      encoding: 'base32',
+      token,
+      window: 1
+    });
+
+    db.logAuth({ userId, timeSlot: slotFromDate(), success: verified, method: 'totp' });
+
+    if (!verified) return res.status(401).json({ success: false, error: 'Invalid authenticator code.' });
+
+    const fallbackRedirect = `http://localhost:${BANK_PORT}/dashboard.html?userId=${encodeURIComponent(userId)}`;
+    return res.json({ success: true, redirectUrl: returnUrl || fallbackRedirect });
+  });
+
+  app.get('/api/totp/status/:userId', (req, res) => {
+    const userId = String(req.params.userId || '');
+    if (!validateUserId(userId)) return res.status(400).json({ error: 'Invalid userId.' });
+
+    const totp = db.getTotpSecret(userId);
+    return res.json({
+      userId,
+      enabled: Boolean(totp?.enabled),
+      configured: Boolean(totp)
+    });
   });
 
   app.post('/api/admin/password', (req, res) => {

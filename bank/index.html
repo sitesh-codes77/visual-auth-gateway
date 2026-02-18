@@ -3,28 +3,127 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Demo Bank - Login</title>
+    <title>Demo Bank Portal</title>
     <style>
-      body { font-family: Arial, sans-serif; background: #0f172a; color: #f8fafc; display:grid; place-items:center; min-height:100vh; margin:0; }
-      .card { background:#111827; border:1px solid #334155; border-radius:12px; padding:1.2rem; width:min(520px,95vw); }
-      button { background:#22c55e; color:#03210e; border:none; border-radius:10px; padding:.7rem 1rem; font-weight:700; cursor:pointer; width:100%; }
-      .muted { color:#cbd5e1; }
+      :root { color-scheme: dark; }
+      body { font-family: Inter, Arial, sans-serif; background: radial-gradient(circle at top, #1e293b 0%, #0b1220 50%); color: #f8fafc; display:grid; place-items:center; min-height:100vh; margin:0; padding:1rem; }
+      .card { background:#101827; border:1px solid #334155; border-radius:16px; padding:1.2rem; width:min(760px,95vw); box-shadow:0 12px 36px rgba(0,0,0,.45); }
+      .row { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; }
+      .panel { border:1px solid #334155; border-radius:12px; padding:.8rem; background:#0f172a; }
+      label { display:grid; gap:.3rem; margin-bottom:.6rem; }
+      input { border:1px solid #3d4e70; border-radius:8px; background:#0b1324; color:#fff; padding:.55rem .7rem; }
+      button { border:none; border-radius:9px; padding:.6rem .8rem; font-weight:700; cursor:pointer; width:100%; }
+      .primary { background:#22c55e; color:#04220f; }
+      .ghost { background:#1e293b; color:#fff; border:1px solid #475569; }
+      .muted { color:#cbd5e1; margin:.2rem 0 .8rem; }
+      .status { min-height:22px; font-weight:600; }
+      .danger { color:#fb7185; }
+      img { width:170px; height:170px; object-fit:contain; background:#fff; border-radius:8px; padding:.3rem; display:none; }
+      @media (max-width: 760px) { .row { grid-template-columns: 1fr; } }
     </style>
   </head>
   <body>
     <section class="card">
       <h1>Demo Bank Portal</h1>
-      <p class="muted">This client redirects authentication to VisualAuth SaaS based on current time slot policy.</p>
-      <button id="login">Login with VisualAuth SaaS</button>
-      <p id="status"></p>
+      <p class="muted">Primary bank login page. Use VisualAuth pattern challenge or authenticator TOTP.</p>
+
+      <label>
+        User ID
+        <input id="userId" value="U123" />
+      </label>
+
+      <div class="row">
+        <div class="panel">
+          <h3>VisualAuth Challenge</h3>
+          <p class="muted">Redirect to SaaS and verify time-slot visual password.</p>
+          <button class="primary" id="visualLogin">Login with VisualAuth SaaS</button>
+        </div>
+
+        <div class="panel">
+          <h3>Authenticator TOTP</h3>
+          <p class="muted">Set up once, then login with your 6-digit authenticator code.</p>
+          <button class="ghost" id="setupTotp">Setup Authenticator</button>
+          <img id="qr" alt="TOTP QR" />
+          <label>
+            TOTP code
+            <input id="totpCode" placeholder="123456" maxlength="6" />
+          </label>
+          <button class="primary" id="enableTotp">Enable TOTP</button>
+          <button class="ghost" id="totpLogin" style="margin-top:.45rem;">Login with TOTP</button>
+        </div>
+      </div>
+
+      <p id="status" class="status"></p>
     </section>
 
     <script>
+      const SAAS = 'http://localhost:3000';
+      const BANK_DASH = 'http://localhost:8080/dashboard.html';
       const statusEl = document.getElementById('status');
-      document.getElementById('login').addEventListener('click', () => {
-        statusEl.textContent = 'Redirecting to SaaS...';
-        const userId = 'U123';
-        window.location.href = `http://localhost:3000/?userId=${encodeURIComponent(userId)}`;
+      const qrEl = document.getElementById('qr');
+      let setupReady = false;
+
+      function status(msg, error = false) {
+        statusEl.textContent = msg;
+        statusEl.classList.toggle('danger', error);
+      }
+
+      async function api(path, body) {
+        const resp = await fetch(`${SAAS}${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(body)
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.error || `Request failed: ${resp.status}`);
+        return data;
+      }
+
+      document.getElementById('visualLogin').addEventListener('click', () => {
+        const userId = document.getElementById('userId').value.trim() || 'U123';
+        status('Redirecting to VisualAuth SaaS...');
+        window.location.href = `${SAAS}/?userId=${encodeURIComponent(userId)}&returnUrl=${encodeURIComponent(`${BANK_DASH}?userId=${userId}`)}`;
+      });
+
+      document.getElementById('setupTotp').addEventListener('click', async () => {
+        try {
+          const userId = document.getElementById('userId').value.trim() || 'U123';
+          const data = await api('/api/totp/setup', { userId });
+          qrEl.src = data.qrDataUrl;
+          qrEl.style.display = 'block';
+          setupReady = true;
+          status('Scan QR with Google Authenticator/Authy, then enter code and click Enable TOTP.');
+        } catch (error) {
+          status(error.message, true);
+        }
+      });
+
+      document.getElementById('enableTotp').addEventListener('click', async () => {
+        try {
+          const userId = document.getElementById('userId').value.trim() || 'U123';
+          const token = document.getElementById('totpCode').value.trim();
+          if (!setupReady) {
+            status('Setup TOTP first to generate QR.', true);
+            return;
+          }
+          await api('/api/totp/enable', { userId, token });
+          status('TOTP enabled successfully. You can now login with TOTP.');
+        } catch (error) {
+          status(error.message, true);
+        }
+      });
+
+      document.getElementById('totpLogin').addEventListener('click', async () => {
+        try {
+          const userId = document.getElementById('userId').value.trim() || 'U123';
+          const token = document.getElementById('totpCode').value.trim();
+          const data = await api('/api/totp/verify', { userId, token, returnUrl: `${BANK_DASH}?userId=${userId}` });
+          status('TOTP verified. Redirecting to dashboard...');
+          window.location.href = data.redirectUrl;
+        } catch (error) {
+          status(error.message, true);
+        }
       });
     </script>
   </body>

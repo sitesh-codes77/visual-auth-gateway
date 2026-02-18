@@ -231,6 +231,41 @@ function getCredentialsByUser(userId) {
     .map((row) => ({ ...row, transports: JSON.parse(row.transports || '[]') }));
 }
 
+
+function upsertTotpSecret({ userId, secretBase32, otpauthUrl, enabled = 0 }) {
+  db.prepare(`
+    INSERT INTO totp_secrets (userId, secretBase32, otpauthUrl, enabled, createdAt, updatedAt)
+    VALUES (@userId, @secretBase32, @otpauthUrl, @enabled, @createdAt, @updatedAt)
+    ON CONFLICT(userId) DO UPDATE SET
+      secretBase32 = excluded.secretBase32,
+      otpauthUrl = excluded.otpauthUrl,
+      enabled = excluded.enabled,
+      updatedAt = excluded.updatedAt
+  `).run({
+    userId,
+    secretBase32,
+    otpauthUrl,
+    enabled: enabled ? 1 : 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+}
+
+function getTotpSecret(userId) {
+  return db
+    .prepare(
+      'SELECT userId, secretBase32, otpauthUrl, enabled, createdAt, updatedAt FROM totp_secrets WHERE userId = ?'
+    )
+    .get(userId);
+}
+
+function enableTotp(userId) {
+  db.prepare('UPDATE totp_secrets SET enabled = 1, updatedAt = ? WHERE userId = ?').run(
+    new Date().toISOString(),
+    userId
+  );
+}
+
 module.exports = {
   init,
   getUser,
@@ -242,5 +277,8 @@ module.exports = {
   logAuth,
   getAuthLogs,
   upsertCredential,
-  getCredentialsByUser
+  getCredentialsByUser,
+  upsertTotpSecret,
+  getTotpSecret,
+  enableTotp
 };

@@ -50,3 +50,14 @@ CREATE TABLE IF NOT EXISTS webauthn_credentials (
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS totp_secrets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  userId TEXT NOT NULL UNIQUE,
+  secretBase32 TEXT NOT NULL,
+  otpauthUrl TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 0,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE
+);

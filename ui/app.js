@@ -9,7 +9,8 @@ const state = {
   timerHandle: null,
   expiresAt: 0,
   matrixSize: 5,
-  revealedPositions: []
+  revealedPositions: [],
+  returnUrl: ''
 };
 
 const els = {
@@ -38,9 +39,14 @@ const els = {
 function syncUserFromQuery() {
   const params = new URLSearchParams(window.location.search);
   const fromQuery = (params.get('userId') || '').trim();
+  const returnUrl = (params.get('returnUrl') || '').trim();
   if (fromQuery) {
     state.userId = fromQuery;
     els.userId.value = fromQuery;
+  }
+
+  if (returnUrl) {
+    state.returnUrl = returnUrl;
   }
 }
 
@@ -158,7 +164,8 @@ els.authForm.addEventListener('submit', async (event) => {
 
     const payload = {
       userId: state.userId,
-      timeSlot: els.timeSlotOverride.value || undefined
+      timeSlot: els.timeSlotOverride.value || undefined,
+      returnUrl: state.returnUrl || undefined
     };
 
     const data = await apiJson('/api/auth/start', {
