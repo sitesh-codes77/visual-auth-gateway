@@ -107,7 +107,10 @@ function getPasswordByTimeSlot(userId, timeSlot) {
 function getAllPasswordsForUser(userId) {
   return db
     .prepare(
-      'SELECT id, timeSlot, originalWord, generatedSentence, matrixConfig, visualPattern, createdAt FROM passwords WHERE userId = ? ORDER BY CASE timeSlot WHEN "morning" THEN 1 WHEN "evening" THEN 2 ELSE 3 END'
+      `SELECT id, timeSlot, originalWord, generatedSentence, matrixConfig, visualPattern, createdAt
+       FROM passwords
+       WHERE userId = ?
+       ORDER BY CASE timeSlot WHEN 'morning' THEN 1 WHEN 'evening' THEN 2 ELSE 3 END`
     )
     .all(userId);
 }
