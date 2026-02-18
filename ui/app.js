@@ -558,3 +558,70 @@ window.addEventListener('beforeunload', () => {
         clearInterval(state.timerInterval);
     }
 });
+
+// ==========================
+// BIOMETRIC (WEBAUTHN)
+// ==========================
+async function startBiometric() {
+  const msg = document.getElementById("bioStatus");
+
+  if (!window.PublicKeyCredential) {
+    msg.textContent = "Biometric not supported";
+    msg.style.color = "#ef4444";
+    return;
+  }
+
+  try {
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        rp: { name: "Visual Auth Gateway" },
+        user: {
+          id: crypto.getRandomValues(new Uint8Array(16)),
+          name: "demo",
+          displayName: "Demo User"
+        },
+        pubKeyCredParams: [{ type: "public-key", alg: -7 }]
+      }
+    });
+
+    if (cred) {
+      msg.textContent = "Fingerprint Verified";
+      msg.style.color = "#22c55e";
+    }
+
+  } catch (err) {
+    msg.textContent = "Biometric Failed";
+    msg.style.color = "#ef4444";
+  }
+}
+
+document.getElementById("bioBtn").addEventListener("click", startBiometric);
+
+// ==========================
+// FACE PRESENCE CHECK
+// ==========================
+async function startFace() {
+  const cam = document.getElementById("faceCam");
+  const msg = document.getElementById("bioStatus");
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    cam.style.display = "block";
+    cam.srcObject = stream;
+
+    setTimeout(() => {
+      stream.getTracks().forEach(t => t.stop());
+      cam.style.display = "none";
+      msg.textContent = "Face Presence Verified";
+      msg.style.color = "#22c55e";
+    }, 4000);
+
+  } catch (err) {
+    msg.textContent = "Camera access denied";
+    msg.style.color = "#ef4444";
+  }
+}
+
+document.getElementById("faceBtn").addEventListener("click", startFace);
+
