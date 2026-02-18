@@ -1,34 +1,90 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Auth Gateway</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VisualAuth SaaS</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="bg-glow glow-one"></div>
+    <div class="bg-glow glow-two"></div>
 
-<div class="card">
-<h2>Secure Login</h2>
+    <main class="container">
+      <section class="card">
+        <header class="hero">
+          <p class="eyebrow">VisualAuth Cloud Gateway</p>
+          <h1>Visual Authentication SaaS</h1>
+          <p class="muted">Time-based multi-password authentication with AI-powered memory hints.</p>
+          <div class="hero-badges">
+            <span class="badge">⏱ 60s Session TTL</span>
+            <span class="badge">🧠 Edge AI Hints</span>
+            <span class="badge">🔐 Passkey Fallback</span>
+          </div>
+        </header>
 
-<div class="auth-modes">
-<button class="mode active" id="mode-visual">🖼️ Picture</button>
-<button class="mode" id="mode-fingerprint">🔐 Fingerprint</button>
-<button class="mode" id="mode-face">📷 Face</button>
-</div>
+        <form id="auth-form" class="stack form-panel">
+          <label>
+            User ID
+            <input id="user-id" name="userId" value="U123" required />
+          </label>
 
-<div id="gridContainer">
-<div id="grid"></div>
-<div class="slots">
-<span id="s1">?</span>
-<span id="s2">?</span>
-<span id="s3">?</span>
-</div>
-<button id="verify">Verify</button>
-</div>
+          <label>
+            Time Slot Override (Demo)
+            <select id="time-slot-override" name="timeSlotOverride">
+              <option value="">Auto detect</option>
+              <option value="morning">Morning</option>
+              <option value="evening">Evening</option>
+              <option value="night">Night</option>
+            </select>
+          </label>
 
-<video id="cam" autoplay></video>
-<p id="msg"></p>
-</div>
+          <button type="submit">Start Authentication</button>
+        </form>
 
-<script src="app.js"></script>
-</body>
+        <div id="challenge" class="hidden stack">
+          <div class="row status-bar">
+            <span>Current slot: <strong id="slot-indicator">-</strong></span>
+            <span class="ttl-pill">Session <strong id="session-timer">60s</strong></span>
+          </div>
+
+          <div class="challenge-grid">
+            <section class="panel stack">
+              <h3>Visual Pattern Challenge</h3>
+              <p class="muted">Tap emojis in the exact order for your active time slot.</p>
+              <div id="pattern-pool" class="pattern-pool"></div>
+              <div id="selected-pattern" class="selected-pattern"></div>
+              <button id="clear-pattern" type="button" class="ghost">Clear Selection</button>
+            </section>
+
+            <section class="panel stack">
+              <h3>AI Hint Engine</h3>
+              <p id="hint-sentence" class="hint-box"></p>
+              <div class="hint-actions">
+                <button id="hint-btn" type="button" class="ghost">Give me a hint</button>
+                <span id="hint-level" class="hint-chip">Level 0 / 3</span>
+              </div>
+              <canvas id="matrix-canvas" width="320" height="320" aria-label="Character matrix"></canvas>
+            </section>
+          </div>
+
+          <div class="actions">
+            <button id="verify-visual" type="button">Verify Visual Password</button>
+            <button id="webauthn-login" type="button" class="ghost">Try Passkey (WebAuthn)</button>
+            <button id="face-id" type="button" class="ghost">Face ID Demo</button>
+          </div>
+        </div>
+
+        <section class="stack admin-panel">
+          <h2>Admin / Demo Tools</h2>
+          <button id="load-passwords" type="button" class="ghost">View all user passwords</button>
+          <pre id="admin-output"></pre>
+        </section>
+
+        <p id="status" role="status"></p>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
 </html>

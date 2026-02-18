@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Astra Bank • Secure Login</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #060b18;
+        --card: rgba(13, 20, 37, 0.82);
+        --line: rgba(117, 137, 189, 0.36);
+        --text: #f8fafc;
+        --muted: #a8b4d3;
+        --accent: #22c55e;
+        --accent-2: #38bdf8;
+        --danger: #fb7185;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Inter, Segoe UI, Arial, sans-serif;
+        color: var(--text);
+        background: radial-gradient(circle at 10% 10%, #1d2f5f 0%, #0a1228 38%, var(--bg) 70%);
+        min-height: 100vh;
+        padding: 1.25rem;
+      }
+
+      .blob {
+        position: fixed;
+        z-index: 0;
+        width: 280px;
+        height: 280px;
+        border-radius: 999px;
+        filter: blur(55px);
+        opacity: 0.35;
+        pointer-events: none;
+      }
+      .blob.one { background: #22d3ee; top: -80px; left: -70px; }
+      .blob.two { background: #a78bfa; right: -90px; bottom: -70px; }
+
+      .layout {
+        position: relative;
+        z-index: 1;
+        max-width: 1040px;
+        margin: 0 auto;
+        display: grid;
+        gap: 1rem;
+      }
+
+      .hero,
+      .card,
+      .metric {
+        background: linear-gradient(150deg, rgba(15, 23, 42, 0.82), var(--card));
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: 0 20px 45px rgba(1, 4, 15, 0.5);
+      }
+
+      .hero { padding: 1.1rem 1.1rem 1rem; }
+      .eyebrow {
+        margin: 0;
+        color: #93c5fd;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+      h1 { margin: 0.4rem 0; font-size: clamp(1.5rem, 2.8vw, 2.25rem); }
+      .muted { color: var(--muted); margin: 0; }
+
+      .hero-grid {
+        margin-top: .9rem;
+        display: grid;
+        gap: .7rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .metric { padding: .75rem; }
+      .metric strong { font-size: 1.2rem; display:block; }
+      .metric span { color: var(--muted); font-size: .85rem; }
+
+      .card { padding: 1rem; }
+      .field { display: grid; gap: .35rem; margin-bottom: .7rem; }
+      input {
+        border: 1px solid #3f5078;
+        border-radius: 10px;
+        background: #0d1528;
+        color: #fff;
+        padding: .64rem .78rem;
+        font: inherit;
+      }
+
+      .panels {
+        display: grid;
+        gap: .85rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .panel {
+        border: 1px solid #334667;
+        border-radius: 14px;
+        background: rgba(10, 16, 31, 0.72);
+        padding: .88rem;
+      }
+      .panel h3 { margin: 0 0 .25rem; }
+
+      button {
+        width: 100%;
+        border: none;
+        border-radius: 10px;
+        padding: .65rem .8rem;
+        font-weight: 700;
+        font: inherit;
+        cursor: pointer;
+        transition: transform .15s ease, filter .15s ease;
+      }
+      button:hover { transform: translateY(-1px); filter: brightness(1.05); }
+      .primary {
+        background: linear-gradient(90deg, var(--accent), #4ade80);
+        color: #03200f;
+      }
+      .ghost {
+        background: #1a2743;
+        color: #fff;
+        border: 1px solid #4b5f8c;
+      }
+
+      img {
+        width: 175px;
+        height: 175px;
+        object-fit: contain;
+        background: #fff;
+        border-radius: 9px;
+        padding: .4rem;
+        display: none;
+        margin: .7rem 0;
+      }
+
+      .status {
+        min-height: 24px;
+        font-weight: 700;
+        margin-top: .85rem;
+      }
+      .danger { color: var(--danger); }
+
+      .tiny {
+        margin-top: .3rem;
+        color: #93a3c7;
+        font-size: .82rem;
+      }
+
+      @media (max-width: 900px) {
+        .hero-grid,
+        .panels { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="blob one"></div>
+    <div class="blob two"></div>
+
+    <main class="layout">
+      <section class="hero">
+        <p class="eyebrow">Astra Bank • Zero-Trust Access</p>
+        <h1>Secure Login Portal</h1>
+        <p class="muted">Choose your preferred method: VisualAuth challenge or Authenticator TOTP.</p>
+        <div class="hero-grid">
+          <div class="metric"><strong>60s</strong><span>Challenge validity</span></div>
+          <div class="metric"><strong>3 Slots</strong><span>Morning/Evening/Night passwords</span></div>
+          <div class="metric"><strong>MFA+</strong><span>Authenticator fallback support</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <label class="field">
+          User ID
+          <input id="userId" value="U123" />
+        </label>
+
+        <div class="panels">
+          <article class="panel">
+            <h3>🖼️ VisualAuth Challenge</h3>
+            <p class="muted">Bank → SaaS redirect, visual pattern verification, auto-return to dashboard.</p>
+            <button class="primary" id="visualLogin">Continue with VisualAuth</button>
+            <p class="tiny">Recommended for daily secure login.</p>
+          </article>
+
+          <article class="panel">
+            <h3>📲 Authenticator TOTP</h3>
+            <p class="muted">Scan QR once, enable with first code, then sign in with 6-digit TOTP.</p>
+            <button class="ghost" id="setupTotp">Generate Authenticator QR</button>
+            <img id="qr" alt="TOTP QR" />
+
+            <label class="field">
+              6-digit code
+              <input id="totpCode" placeholder="123456" maxlength="6" inputmode="numeric" />
+            </label>
+
+            <button class="primary" id="enableTotp">Enable TOTP</button>
+            <button class="ghost" id="totpLogin" style="margin-top:.5rem;">Sign in with TOTP</button>
+          </article>
+        </div>
+
+        <p id="status" class="status"></p>
+      </section>
+    </main>
+
+    <script>
+      const SAAS = 'http://localhost:3000';
+      const BANK_DASH = 'http://localhost:8080/dashboard.html';
+      const statusEl = document.getElementById('status');
+      const qrEl = document.getElementById('qr');
+      const totpInput = document.getElementById('totpCode');
+      let setupReady = false;
+
+      function status(msg, error = false) {
+        statusEl.textContent = msg;
+        statusEl.classList.toggle('danger', error);
+      }
+
+      function normalizeToken(value) {
+        return value.replace(/\D/g, '').slice(0, 6);
+      }
+
+      totpInput.addEventListener('input', (event) => {
+        event.target.value = normalizeToken(event.target.value);
+      });
+
+      async function api(path, body) {
+        const resp = await fetch(`${SAAS}${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(body)
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.error || `Request failed: ${resp.status}`);
+        return data;
+      }
+
+      document.getElementById('visualLogin').addEventListener('click', () => {
+        const userId = document.getElementById('userId').value.trim() || 'U123';
+        status('Opening VisualAuth challenge...');
+        window.location.href = `${SAAS}/?userId=${encodeURIComponent(userId)}&returnUrl=${encodeURIComponent(`${BANK_DASH}?userId=${userId}`)}`;
+      });
+
+      document.getElementById('setupTotp').addEventListener('click', async () => {
+        try {
+          const userId = document.getElementById('userId').value.trim() || 'U123';
+          const data = await api('/api/totp/setup', { userId });
+          qrEl.src = data.qrDataUrl;
+          qrEl.style.display = 'block';
+          setupReady = true;
+          status('QR generated. Scan in Authenticator app, then enter code and click Enable TOTP.');
+        } catch (error) {
+          status(error.message, true);
+        }
+      });
+
+      document.getElementById('enableTotp').addEventListener('click', async () => {
+        try {
+          const userId = document.getElementById('userId').value.trim() || 'U123';
+          const token = normalizeToken(totpInput.value.trim());
+          if (!setupReady) {
+            status('Please generate QR first.', true);
+            return;
+          }
+          await api('/api/totp/enable', { userId, token });
+          status('TOTP enabled. You can now use Sign in with TOTP.');
+        } catch (error) {
+          status(error.message, true);
+        }
+      });
+
+      document.getElementById('totpLogin').addEventListener('click', async () => {
+        try {
+          const userId = document.getElementById('userId').value.trim() || 'U123';
+          const token = normalizeToken(totpInput.value.trim());
+          const data = await api('/api/totp/verify', {
+            userId,
+            token,
+            returnUrl: `${BANK_DASH}?userId=${userId}`
+          });
+          status('TOTP verified. Redirecting to dashboard...');
+          window.location.href = data.redirectUrl;
+        } catch (error) {
+          status(error.message, true);
+        }
+      });
+    </script>
+  </body>
+</html>

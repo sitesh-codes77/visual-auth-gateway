@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Astra Bank • Security Dashboard</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #070b17;
+        --text: #f8fafc;
+        --muted: #a9b7d9;
+        --line: #30405f;
+        --panel: rgba(13, 21, 39, 0.85);
+        --ok: #22c55e;
+        --bad: #fb7185;
+        --blue: #38bdf8;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Inter, Segoe UI, Arial, sans-serif;
+        background: radial-gradient(circle at top, #1f2f59 0%, #0b142b 37%, var(--bg) 68%);
+        color: var(--text);
+        min-height: 100vh;
+        padding: 1.2rem;
+      }
+
+      .wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: .95rem; }
+      .panel {
+        background: linear-gradient(145deg, rgba(15, 23, 42, 0.85), var(--panel));
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 1rem;
+        box-shadow: 0 16px 42px rgba(1, 5, 18, 0.52);
+      }
+
+      .top {
+        display: grid;
+        gap: .85rem;
+        grid-template-columns: 2fr 1fr;
+      }
+
+      h1,h2,h3 { margin: 0; }
+      .muted { color: var(--muted); margin: .35rem 0 0; }
+      .chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
+      .chip {
+        border: 1px solid #3f537d;
+        border-radius: 999px;
+        padding: .32rem .68rem;
+        font-size: .82rem;
+        color: #dce7ff;
+        background: rgba(12, 19, 34, 0.65);
+      }
+
+      .actions { display: grid; gap: .55rem; align-content: start; }
+      button {
+        border: none;
+        border-radius: 10px;
+        padding: .62rem .85rem;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .primary { background: linear-gradient(90deg, #22c55e, #4ade80); color: #04210f; }
+      .ghost { background: #18233e; border: 1px solid #405480; color: #fff; }
+      a { color: var(--blue); text-decoration: none; }
+
+      .stats {
+        display: grid;
+        gap: .7rem;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-top: .85rem;
+      }
+      .stat {
+        border: 1px solid #34496f;
+        border-radius: 12px;
+        padding: .7rem;
+        background: rgba(7, 12, 25, 0.6);
+      }
+      .stat strong { display: block; font-size: 1.25rem; }
+      .stat span { color: var(--muted); font-size: .82rem; }
+
+      table { width: 100%; border-collapse: collapse; margin-top: .5rem; }
+      th,td { border-bottom: 1px solid #30405f; padding: .62rem .5rem; text-align: left; font-size: .93rem; }
+      th { color: #b8c7ea; font-weight: 700; }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        padding: .15rem .6rem;
+        font-weight: 700;
+        font-size: .76rem;
+      }
+      .ok { color: var(--ok); }
+      .bad { color: var(--bad); }
+      .ok-bg { background: rgba(34,197,94,.17); color: #86efac; border: 1px solid rgba(34,197,94,.4); }
+      .bad-bg { background: rgba(251,113,133,.16); color: #fda4af; border: 1px solid rgba(251,113,133,.35); }
+
+      @media (max-width: 980px) {
+        .top { grid-template-columns: 1fr; }
+        .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+      @media (max-width: 640px) {
+        .stats { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="panel top">
+        <div>
+          <h1>Security Command Dashboard</h1>
+          <p id="welcome" class="muted"></p>
+          <div class="chips">
+            <span class="chip">VisualAuth + TOTP Enabled</span>
+            <span class="chip">Real-time Auth History</span>
+            <span class="chip">Session Telemetry</span>
+          </div>
+
+          <div class="stats">
+            <div class="stat"><strong id="totalCount">0</strong><span>Total Attempts</span></div>
+            <div class="stat"><strong id="passCount">0</strong><span>Successful</span></div>
+            <div class="stat"><strong id="failCount">0</strong><span>Failed</span></div>
+            <div class="stat"><strong id="lastMethod">-</strong><span>Last Method</span></div>
+          </div>
+        </div>
+
+        <aside class="actions">
+          <button id="refresh" class="primary">Refresh History</button>
+          <button id="exportJson" class="ghost">Export History JSON</button>
+          <a href="/index.html">← Back to bank login</a>
+        </aside>
+      </section>
+
+      <section class="panel">
+        <h2>Authentication History</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Time Slot</th>
+              <th>Method</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody id="history"></tbody>
+        </table>
+      </section>
+    </main>
+
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const userId = params.get('userId') || 'U123';
+      const historyEl = document.getElementById('history');
+      let latestLogs = [];
+
+      document.getElementById('welcome').textContent = `Welcome ${userId}. Here is your latest authentication activity.`;
+
+      function updateStats(logs) {
+        const total = logs.length;
+        const pass = logs.filter((entry) => entry.success).length;
+        const fail = total - pass;
+        const lastMethod = logs[0]?.method || '-';
+
+        document.getElementById('totalCount').textContent = String(total);
+        document.getElementById('passCount').textContent = String(pass);
+        document.getElementById('failCount').textContent = String(fail);
+        document.getElementById('lastMethod').textContent = lastMethod;
+      }
+
+      function renderLogs(logs) {
+        if (!logs.length) {
+          historyEl.innerHTML = '<tr><td colspan="4">No authentication history available.</td></tr>';
+          return;
+        }
+
+        historyEl.innerHTML = logs.map((log) => {
+          const resultLabel = log.success ? 'PASS' : 'FAIL';
+          const resultClass = log.success ? 'ok-bg' : 'bad-bg';
+
+          return `
+            <tr>
+              <td>${new Date(log.timestamp).toLocaleString()}</td>
+              <td>${log.timeSlot}</td>
+              <td><span class="badge">${log.method}</span></td>
+              <td><span class="badge ${resultClass}">${resultLabel}</span></td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      async function loadHistory() {
+        historyEl.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+
+        try {
+          const resp = await fetch(`/api/auth-history/${encodeURIComponent(userId)}`);
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Failed to load history');
+
+          latestLogs = data.logs || [];
+          updateStats(latestLogs);
+          renderLogs(latestLogs);
+        } catch (error) {
+          historyEl.innerHTML = `<tr><td colspan="4">${error.message}</td></tr>`;
+        }
+      }
+
+      document.getElementById('refresh').addEventListener('click', loadHistory);
+      document.getElementById('exportJson').addEventListener('click', () => {
+        const data = JSON.stringify({ userId, logs: latestLogs }, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `auth-history-${userId}.json`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      });
+
+      loadHistory();
+    </script>
+  </body>
+</html>
