@@ -558,18 +558,22 @@
       document.getElementById('lastMethod').textContent = lastMethod;
 
       // Update Risk Meter
-      if (fail === 0) {
+      if (fail < 5) {
         riskFill.className = 'risk-fill risk-low';
-        riskStatus.textContent = 'SECURE';
+        riskStatus.textContent = 'LOW RISK';
         riskStatus.style.color = 'var(--success)';
-      } else if (fail < 3) {
+        riskFill.style.width = total > 0 ? `${(fail / total) * 30}%` : '15%';
+        if (fail === 0) riskFill.style.width = '12%';
+      } else if (fail < 12) {
         riskFill.className = 'risk-fill risk-med';
-        riskStatus.textContent = 'MEDIUM';
+        riskStatus.textContent = 'MEDIUM RISK';
         riskStatus.style.color = 'var(--warning)';
+        riskFill.style.width = '55%';
       } else {
         riskFill.className = 'risk-fill risk-high';
-        riskStatus.textContent = 'HIGH';
+        riskStatus.textContent = 'HIGH RISK';
         riskStatus.style.color = 'var(--error)';
+        riskFill.style.width = '95%';
       }
     }
 
