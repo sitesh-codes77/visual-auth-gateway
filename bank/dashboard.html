@@ -558,7 +558,7 @@
       document.getElementById('lastMethod').textContent = lastMethod;
 
       // Update Risk Meter
-      if (fail < 5) {
+      if (fail <= 5) {
         riskFill.className = 'risk-fill risk-low';
         riskStatus.textContent = 'LOW RISK';
         riskStatus.style.color = 'var(--success)';
