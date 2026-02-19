@@ -160,6 +160,13 @@ function renderSelectedPattern() {
   });
 }
 
+
+function formatRevealedChars(revealedChars) {
+  if (Array.isArray(revealedChars)) return revealedChars.join('');
+  if (typeof revealedChars === 'string') return revealedChars;
+  return '';
+}
+
 function base64UrlToBuffer(base64url) {
   const padLength = (4 - (base64url.length % 4)) % 4;
   const base64 = (base64url + '='.repeat(padLength)).replace(/-/g, '+').replace(/_/g, '/');
@@ -319,9 +326,9 @@ els.hintBtn.addEventListener('click', async () => {
     state.hintLevel = hint.hintLevel;
     state.revealedPositions = hint.matrixPositions || [];
 
-    els.hintLevel.textContent = `Level ${state.hintLevel} / ${state.maxHintLevel}`;
+    els.hintLevel.textContent = `TRC Lvl: ${state.hintLevel}/${state.maxHintLevel}`;
 
-    const reveal = (hint.revealedChars || []).join('');
+    const reveal = formatRevealedChars(hint.revealedChars);
     els.hintSentence.textContent = `${hint.sentence} ${reveal ? ` | Revealed: ${reveal}` : ''}`;
 
     drawMatrix(state.matrixSize, state.hintLevel >= 2 ? state.revealedPositions : []);

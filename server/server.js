@@ -84,6 +84,12 @@ function resolveWebAuthnConfig(req) {
   return { rpID, expectedOrigin };
 }
 
+function normalizeRevealedChars(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item));
+  if (typeof value === 'string') return value ? [value] : [];
+  return [];
+}
+
 function parsePasswordRecord(password) {
   return {
     ...password,
@@ -212,7 +218,7 @@ function createSaaSApp() {
 
     res.json({
       hintLevel: hint.hintLevel,
-      revealedChars: JSON.parse(hint.revealedChars),
+      revealedChars: normalizeRevealedChars(JSON.parse(hint.revealedChars)),
       sentence: hint.aiGeneratedSentence,
       matrixPositions: JSON.parse(hint.matrixPositions)
     });
@@ -544,7 +550,7 @@ function createSaaSApp() {
         password: parsePasswordRecord(result.password),
         hints: result.hints.map((hint) => ({
           ...hint,
-          revealedChars: JSON.parse(hint.revealedChars),
+          revealedChars: normalizeRevealedChars(JSON.parse(hint.revealedChars)),
           matrixPositions: JSON.parse(hint.matrixPositions)
         }))
       });
