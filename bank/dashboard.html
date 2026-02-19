@@ -1,226 +1,633 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Astra Bank • Security Dashboard</title>
-    <style>
-      :root {
-        color-scheme: dark;
-        --bg: #070b17;
-        --text: #f8fafc;
-        --muted: #a9b7d9;
-        --line: #30405f;
-        --panel: rgba(13, 21, 39, 0.85);
-        --ok: #22c55e;
-        --bad: #fb7185;
-        --blue: #38bdf8;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Astra Bank • Security Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #0f172a;
+      --accent: #3b82f6;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --bg-body: #f1f5f9;
+      --bg-card: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      min-height: 100vh;
+    }
+
+    /* Navbar */
+    .navbar {
+      background: var(--primary);
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .brand i {
+      color: var(--accent);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 0.4rem 0.8rem;
+      border-radius: 999px;
+      font-size: 0.875rem;
+    }
+
+    .logout {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+
+    .logout:hover {
+      color: white;
+    }
+
+    /* Layout */
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 2rem;
+    }
+
+    /* Main Content */
+    .main-col {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .welcome-header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .welcome-header p {
+      color: var(--text-muted);
+    }
+
+    /* Balance Card */
+    .balance-card {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border-radius: 20px;
+      padding: 2rem;
+      color: white;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+    }
+
+    .balance-card::after {
+      content: '';
+      position: absolute;
+      top: -50px;
+      right: -50px;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .balance-label {
+      font-size: 0.875rem;
+      color: #94a3b8;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .balance-amount {
+      font-family: 'Poppins', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .balance-actions {
+      margin-top: 1.5rem;
+      display: flex;
+      gap: 1rem;
+    }
+
+    .btn {
+      padding: 0.6rem 1rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-light {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    .btn-light:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-accent:hover {
+      background: #2563eb;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+    }
+
+    .stat-item {
+      background: var(--bg-card);
+      padding: 1.25rem;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .stat-item i {
+      font-size: 1.25rem;
+      color: var(--accent);
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Table */
+    .data-panel {
+      background: var(--bg-card);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .panel-header h2 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.25rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      text-align: left;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 1rem;
+      font-size: 0.9rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .badge-status {
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .badge-pass {
+      background: rgba(16, 185, 129, 0.1);
+      color: #065f46;
+    }
+
+    .badge-fail {
+      background: rgba(239, 68, 68, 0.1);
+      color: #991b1b;
+    }
+
+    .badge-method {
+      background: #f1f5f9;
+      color: var(--primary);
+    }
+
+    /* Sidebar */
+    .sidebar-col {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .security-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    }
+
+    .security-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .security-header i {
+      color: var(--success);
+      font-size: 1.5rem;
+    }
+
+    .security-header h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
+    }
+
+    .risk-meter {
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      margin: 1rem 0;
+      position: relative;
+    }
+
+    .risk-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+
+    .risk-low {
+      width: 15%;
+      background: var(--success);
+    }
+
+    .risk-med {
+      width: 45%;
+      background: var(--warning);
+    }
+
+    .risk-high {
+      width: 85%;
+      background: var(--error);
+    }
+
+    .risk-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .security-feature {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      font-size: 0.825rem;
+    }
+
+    .security-feature i {
+      color: var(--success);
+    }
+
+    @media (max-width: 1000px) {
+      .dashboard-container {
+        grid-template-columns: 1fr;
       }
 
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        font-family: Inter, Segoe UI, Arial, sans-serif;
-        background: radial-gradient(circle at top, #1f2f59 0%, #0b142b 37%, var(--bg) 68%);
-        color: var(--text);
-        min-height: 100vh;
-        padding: 1.2rem;
+      .sidebar-col {
+        flex-direction: row;
       }
 
-      .wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: .95rem; }
-      .panel {
-        background: linear-gradient(145deg, rgba(15, 23, 42, 0.85), var(--panel));
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        padding: 1rem;
-        box-shadow: 0 16px 42px rgba(1, 5, 18, 0.52);
+      .security-card {
+        flex: 1;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
       }
 
-      .top {
-        display: grid;
-        gap: .85rem;
-        grid-template-columns: 2fr 1fr;
+      .sidebar-col {
+        flex-direction: column;
       }
+    }
+  </style>
+</head>
 
-      h1,h2,h3 { margin: 0; }
-      .muted { color: var(--muted); margin: .35rem 0 0; }
-      .chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
-      .chip {
-        border: 1px solid #3f537d;
-        border-radius: 999px;
-        padding: .32rem .68rem;
-        font-size: .82rem;
-        color: #dce7ff;
-        background: rgba(12, 19, 34, 0.65);
-      }
+<body>
+  <nav class="navbar">
+    <div class="brand">
+      <i class="fas fa-shield-halved"></i>
+      <span>Astra Bank</span>
+    </div>
+    <div class="nav-actions">
+      <div class="user-pill">
+        <i class="fas fa-user-circle"></i>
+        <span id="user-display">U123</span>
+      </div>
+      <a href="/index.html" class="logout"><i class="fas fa-right-from-bracket"></i> Logout</a>
+    </div>
+  </nav>
 
-      .actions { display: grid; gap: .55rem; align-content: start; }
-      button {
-        border: none;
-        border-radius: 10px;
-        padding: .62rem .85rem;
-        font: inherit;
-        font-weight: 700;
-        cursor: pointer;
-      }
-      .primary { background: linear-gradient(90deg, #22c55e, #4ade80); color: #04210f; }
-      .ghost { background: #18233e; border: 1px solid #405480; color: #fff; }
-      a { color: var(--blue); text-decoration: none; }
+  <main class="dashboard-container">
+    <div class="main-col">
+      <header class="welcome-header">
+        <h1>Welcome Back, <span id="userId-label">U123</span></h1>
+        <p>Security protocol active. Monitor your account telemetry in real-time.</p>
+      </header>
 
-      .stats {
-        display: grid;
-        gap: .7rem;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        margin-top: .85rem;
-      }
-      .stat {
-        border: 1px solid #34496f;
-        border-radius: 12px;
-        padding: .7rem;
-        background: rgba(7, 12, 25, 0.6);
-      }
-      .stat strong { display: block; font-size: 1.25rem; }
-      .stat span { color: var(--muted); font-size: .82rem; }
-
-      table { width: 100%; border-collapse: collapse; margin-top: .5rem; }
-      th,td { border-bottom: 1px solid #30405f; padding: .62rem .5rem; text-align: left; font-size: .93rem; }
-      th { color: #b8c7ea; font-weight: 700; }
-
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 999px;
-        padding: .15rem .6rem;
-        font-weight: 700;
-        font-size: .76rem;
-      }
-      .ok { color: var(--ok); }
-      .bad { color: var(--bad); }
-      .ok-bg { background: rgba(34,197,94,.17); color: #86efac; border: 1px solid rgba(34,197,94,.4); }
-      .bad-bg { background: rgba(251,113,133,.16); color: #fda4af; border: 1px solid rgba(251,113,133,.35); }
-
-      @media (max-width: 980px) {
-        .top { grid-template-columns: 1fr; }
-        .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      }
-      @media (max-width: 640px) {
-        .stats { grid-template-columns: 1fr; }
-      }
-    </style>
-  </head>
-  <body>
-    <main class="wrap">
-      <section class="panel top">
-        <div>
-          <h1>Security Command Dashboard</h1>
-          <p id="welcome" class="muted"></p>
-          <div class="chips">
-            <span class="chip">VisualAuth + TOTP Enabled</span>
-            <span class="chip">Real-time Auth History</span>
-            <span class="chip">Session Telemetry</span>
-          </div>
-
-          <div class="stats">
-            <div class="stat"><strong id="totalCount">0</strong><span>Total Attempts</span></div>
-            <div class="stat"><strong id="passCount">0</strong><span>Successful</span></div>
-            <div class="stat"><strong id="failCount">0</strong><span>Failed</span></div>
-            <div class="stat"><strong id="lastMethod">-</strong><span>Last Method</span></div>
-          </div>
+      <section class="balance-card">
+        <span class="balance-label">Available Balance</span>
+        <div class="balance-amount">
+          <span style="font-size: 1.5rem; opacity: 0.7;">$</span>
+          <span>14,582.40</span>
         </div>
-
-        <aside class="actions">
-          <button id="refresh" class="primary">Refresh History</button>
-          <button id="exportJson" class="ghost">Export History JSON</button>
-          <a href="/index.html">← Back to bank login</a>
-        </aside>
+        <div class="balance-actions">
+          <button class="btn btn-accent"><i class="fas fa-paper-plane"></i> Transfer</button>
+          <button class="btn btn-light"><i class="fas fa-file-invoice-dollar"></i> Utility Bills</button>
+          <button class="btn btn-light"><i class="fas fa-piggy-bank"></i> Invest</button>
+        </div>
       </section>
 
-      <section class="panel">
-        <h2>Authentication History</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Timestamp</th>
-              <th>Time Slot</th>
-              <th>Method</th>
-              <th>Result</th>
-            </tr>
-          </thead>
-          <tbody id="history"></tbody>
-        </table>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <i class="fas fa-shield-heart"></i>
+          <div class="stat-value" id="totalCount">0</div>
+          <div class="stat-label">Total Logs</div>
+        </div>
+        <div class="stat-item">
+          <i class="fas fa-circle-check" style="color: var(--success);"></i>
+          <div class="stat-value" id="passCount">0</div>
+          <div class="stat-label">Successful</div>
+        </div>
+        <div class="stat-item">
+          <i class="fas fa-circle-xmark" style="color: var(--error);"></i>
+          <div class="stat-value" id="failCount">0</div>
+          <div class="stat-label">Blocked</div>
+        </div>
+        <div class="stat-item">
+          <i class="fas fa-fingerprint"></i>
+          <div class="stat-value" id="lastMethod" style="font-size: 1rem;">-</div>
+          <div class="stat-label">Last Mode</div>
+        </div>
+      </div>
+
+      <section class="data-panel">
+        <div class="panel-header">
+          <h2>Recent Security Events</h2>
+          <button id="refresh" class="btn btn-light" style="background: #f1f5f9; color: var(--primary);">
+            <i class="fas fa-rotate"></i> Sync
+          </button>
+        </div>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Time Slot</th>
+                <th>Method</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody id="history">
+              <tr>
+                <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">Syncing
+                  telemetry...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
-    </main>
+    </div>
 
-    <script>
-      const params = new URLSearchParams(window.location.search);
-      const userId = params.get('userId') || 'U123';
-      const historyEl = document.getElementById('history');
-      let latestLogs = [];
+    <aside class="sidebar-col">
+      <section class="security-card">
+        <div class="security-header">
+          <i class="fas fa-user-shield"></i>
+          <h3>Account Risk Level</h3>
+        </div>
+        <div class="risk-label">
+          <span>Low Risk</span>
+          <span id="risk-status" style="font-weight: 700; color: var(--success);">SECURE</span>
+        </div>
+        <div class="risk-meter">
+          <div id="risk-fill" class="risk-fill risk-low"></div>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+          Your account is protected by VisualAuth™ zero-trust pattern matching.
+        </p>
+        <div class="security-feature">
+          <i class="fas fa-check"></i>
+          <span>MFA Enabled</span>
+        </div>
+        <div class="security-feature">
+          <i class="fas fa-check"></i>
+          <span>IP Guard Active</span>
+        </div>
+        <div class="security-feature" id="status-method-badge">
+          <i class="fas fa-check"></i>
+          <span>VisualAuth Pattern</span>
+        </div>
+      </section>
 
-      document.getElementById('welcome').textContent = `Welcome ${userId}. Here is your latest authentication activity.`;
+      <section class="security-card" style="background: var(--primary); color: white;">
+        <h3 style="font-family: 'Poppins', sans-serif; margin-bottom: 1rem;">Export Audit</h3>
+        <p style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 1.5rem;">Download your official login audit logs
+          for compliance.</p>
+        <button id="exportJson" class="btn btn-accent" style="width: 100%;">
+          <i class="fas fa-download"></i> Download JSON
+        </button>
+      </section>
+    </aside>
+  </main>
 
-      function updateStats(logs) {
-        const total = logs.length;
-        const pass = logs.filter((entry) => entry.success).length;
-        const fail = total - pass;
-        const lastMethod = logs[0]?.method || '-';
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const userId = params.get('userId') || 'U123';
+    const historyEl = document.getElementById('history');
+    const userDisplay = document.getElementById('user-display');
+    const userIdLabel = document.getElementById('userId-label');
+    const riskFill = document.getElementById('risk-fill');
+    const riskStatus = document.getElementById('risk-status');
 
-        document.getElementById('totalCount').textContent = String(total);
-        document.getElementById('passCount').textContent = String(pass);
-        document.getElementById('failCount').textContent = String(fail);
-        document.getElementById('lastMethod').textContent = lastMethod;
+    let latestLogs = [];
+
+    userDisplay.textContent = userId;
+    userIdLabel.textContent = userId;
+
+    function updateStats(logs) {
+      const total = logs.length;
+      const pass = logs.filter((entry) => entry.success).length;
+      const fail = total - pass;
+      const lastMethod = logs[0]?.method || '-';
+
+      document.getElementById('totalCount').textContent = String(total);
+      document.getElementById('passCount').textContent = String(pass);
+      document.getElementById('failCount').textContent = String(fail);
+      document.getElementById('lastMethod').textContent = lastMethod;
+
+      // Update Risk Meter
+      if (fail === 0) {
+        riskFill.className = 'risk-fill risk-low';
+        riskStatus.textContent = 'SECURE';
+        riskStatus.style.color = 'var(--success)';
+      } else if (fail < 3) {
+        riskFill.className = 'risk-fill risk-med';
+        riskStatus.textContent = 'MEDIUM';
+        riskStatus.style.color = 'var(--warning)';
+      } else {
+        riskFill.className = 'risk-fill risk-high';
+        riskStatus.textContent = 'HIGH';
+        riskStatus.style.color = 'var(--error)';
+      }
+    }
+
+    function renderLogs(logs) {
+      if (!logs.length) {
+        historyEl.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No logs detected.</td></tr>';
+        return;
       }
 
-      function renderLogs(logs) {
-        if (!logs.length) {
-          historyEl.innerHTML = '<tr><td colspan="4">No authentication history available.</td></tr>';
-          return;
-        }
+      historyEl.innerHTML = logs.map((log) => {
+        const resultLabel = log.success ? 'PASS' : 'FAIL';
+        const resultClass = log.success ? 'badge-pass' : 'badge-fail';
 
-        historyEl.innerHTML = logs.map((log) => {
-          const resultLabel = log.success ? 'PASS' : 'FAIL';
-          const resultClass = log.success ? 'ok-bg' : 'bad-bg';
+        return `
+                    <tr>
+                        <td><span style="color: var(--text-muted);">${new Date(log.timestamp).toLocaleDateString()}</span> ${new Date(log.timestamp).toLocaleTimeString()}</td>
+                        <td><span style="font-family: monospace; color: var(--accent);">${log.timeSlot.toUpperCase()}</span></td>
+                        <td><span class="badge-status badge-method">${log.method}</span></td>
+                        <td><span class="badge-status ${resultClass}">${resultLabel}</span></td>
+                    </tr>
+                `;
+      }).join('');
+    }
 
-          return `
-            <tr>
-              <td>${new Date(log.timestamp).toLocaleString()}</td>
-              <td>${log.timeSlot}</td>
-              <td><span class="badge">${log.method}</span></td>
-              <td><span class="badge ${resultClass}">${resultLabel}</span></td>
-            </tr>
-          `;
-        }).join('');
+    async function loadHistory() {
+      try {
+        const resp = await fetch(`/api/auth-history/${encodeURIComponent(userId)}`);
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Failed to load history');
+
+        latestLogs = data.logs || [];
+        updateStats(latestLogs);
+        renderLogs(latestLogs);
+      } catch (error) {
+        historyEl.innerHTML = `<tr><td colspan="4" style="color: var(--error);">${error.message}</td></tr>`;
       }
+    }
 
-      async function loadHistory() {
-        historyEl.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
-
-        try {
-          const resp = await fetch(`/api/auth-history/${encodeURIComponent(userId)}`);
-          const data = await resp.json();
-          if (!resp.ok) throw new Error(data.error || 'Failed to load history');
-
-          latestLogs = data.logs || [];
-          updateStats(latestLogs);
-          renderLogs(latestLogs);
-        } catch (error) {
-          historyEl.innerHTML = `<tr><td colspan="4">${error.message}</td></tr>`;
-        }
-      }
-
-      document.getElementById('refresh').addEventListener('click', loadHistory);
-      document.getElementById('exportJson').addEventListener('click', () => {
-        const data = JSON.stringify({ userId, logs: latestLogs }, null, 2);
-        const blob = new Blob([data], { type: 'application/json' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `auth-history-${userId}.json`;
-        link.click();
-        URL.revokeObjectURL(link.href);
+    document.getElementById('refresh').addEventListener('click', () => {
+      const icon = document.querySelector('#refresh i');
+      icon.classList.add('fa-spin');
+      loadHistory().finally(() => {
+        setTimeout(() => icon.classList.remove('fa-spin'), 500);
       });
+    });
 
-      loadHistory();
-    </script>
-  </body>
+    document.getElementById('exportJson').addEventListener('click', () => {
+      const data = JSON.stringify({ userId, logs: latestLogs }, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `audit-log-${userId}.json`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    });
+
+    loadHistory();
+  </script>
+</body>
+
 </html>

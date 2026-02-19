@@ -269,11 +269,6 @@ function enableTotp(userId) {
   );
 }
 
-
-function updateCredentialCounter(credentialId, counter) {
-  db.prepare('UPDATE webauthn_credentials SET counter = ? WHERE credentialId = ?').run(counter, credentialId);
-}
-
 module.exports = {
   init,
   getUser,
@@ -288,6 +283,5 @@ module.exports = {
   getCredentialsByUser,
   upsertTotpSecret,
   getTotpSecret,
-  enableTotp,
-  updateCredentialCounter
+  enableTotp
 };

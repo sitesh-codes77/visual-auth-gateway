@@ -13,7 +13,7 @@ const {
 } = require('@simplewebauthn/server');
 
 const db = require('./database');
-const { generateHintBundle, extractPositions } = require('./ai-engine');
+const { generateHintBundle } = require('./ai-engine');
 
 const SaaSPort = Number(process.env.PORT || 3000);
 const BANK_PORT = Number(process.env.BANK_PORT || 8080);
@@ -62,19 +62,6 @@ function parsePasswordRecord(password) {
     ...password,
     matrixConfig: JSON.parse(password.matrixConfig),
     visualPattern: JSON.parse(password.visualPattern)
-  };
-}
-
-
-function encodeBase64url(buffer) {
-  return Buffer.from(buffer).toString('base64url');
-}
-
-function toPublicKeyCredentialDescriptor(cred) {
-  return {
-    id: encodeBase64url(Buffer.from(cred.credentialId, 'base64url')),
-    type: 'public-key',
-    transports: cred.transports
   };
 }
 
@@ -204,28 +191,6 @@ function createSaaSApp() {
     });
   });
 
-
-
-  app.get('/api/auth/trace', (req, res) => {
-    const challenge = req.session.authChallenge;
-    if (!challenge) return res.status(440).json({ error: 'Session expired. Start again.' });
-
-    const password = db.getPasswordByTimeSlot(challenge.userId, challenge.timeSlot);
-    if (!password) return res.status(404).json({ error: 'Password not configured.' });
-
-    const parsed = parsePasswordRecord(password);
-    const trace = {
-      timeSlot: challenge.timeSlot,
-      wordLength: parsed.originalWord.length,
-      sentence: parsed.generatedSentence,
-      matrixSize: parsed.matrixConfig.size,
-      matrixPlacements: parsed.matrixConfig.placements,
-      sentencePositions: extractPositions(parsed.generatedSentence, parsed.originalWord)
-    };
-
-    return res.json({ trace });
-  });
-
   app.post('/api/auth/verify-visual', (req, res) => {
     const challenge = req.session.authChallenge;
     if (!challenge) return res.status(440).json({ error: 'Session expired. Start again.' });
@@ -283,34 +248,34 @@ function createSaaSApp() {
   });
 
   app.post('/api/auth/webauthn/register/options', async (req, res) => {
-    try {
-      const userId = String(req.body.userId || '');
-      if (!validateUserId(userId)) return res.status(400).json({ error: 'Invalid userId.' });
+    const userId = String(req.body.userId || '');
+    if (!validateUserId(userId)) return res.status(400).json({ error: 'Invalid userId.' });
 
-      const user = db.getUser(userId);
-      if (!user) return res.status(404).json({ error: 'User not found.' });
+    const user = db.getUser(userId);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
 
-      const existing = db.getCredentialsByUser(userId).map((cred) => toPublicKeyCredentialDescriptor(cred));
+    const existing = db.getCredentialsByUser(userId).map((cred) => ({
+      id: cred.credentialId,
+      type: 'public-key',
+      transports: cred.transports
+    }));
 
-      const options = await generateRegistrationOptions({
-        rpName: RP_NAME,
-        rpID: RP_ID,
-        userID: Buffer.from(user.userId, 'utf8'),
-        userName: user.name,
-        timeout: 60000,
-        attestationType: 'none',
-        excludeCredentials: existing,
-        authenticatorSelection: {
-          residentKey: 'preferred',
-          userVerification: 'preferred'
-        }
-      });
+    const options = await generateRegistrationOptions({
+      rpName: RP_NAME,
+      rpID: RP_ID,
+      userID: user.userId,
+      userName: user.name,
+      timeout: 60000,
+      attestationType: 'none',
+      excludeCredentials: existing,
+      authenticatorSelection: {
+        residentKey: 'preferred',
+        userVerification: 'preferred'
+      }
+    });
 
-      activeChallenges.set(`reg:${userId}`, options.challenge);
-      return res.json(options);
-    } catch (_error) {
-      return res.status(500).json({ error: 'Unable to generate passkey registration options.' });
-    }
+    activeChallenges.set(`reg:${userId}`, options.challenge);
+    res.json(options);
   });
 
   app.post('/api/auth/webauthn/register/verify', async (req, res) => {
@@ -345,23 +310,23 @@ function createSaaSApp() {
   });
 
   app.post('/api/auth/webauthn/login/options', async (req, res) => {
-    try {
-      const userId = String(req.body.userId || '');
-      if (!validateUserId(userId)) return res.status(400).json({ error: 'Invalid userId.' });
+    const userId = String(req.body.userId || '');
+    if (!validateUserId(userId)) return res.status(400).json({ error: 'Invalid userId.' });
 
-      const credentials = db.getCredentialsByUser(userId);
-      const options = await generateAuthenticationOptions({
-        rpID: RP_ID,
-        timeout: 60000,
-        userVerification: 'preferred',
-        allowCredentials: credentials.map((cred) => toPublicKeyCredentialDescriptor(cred))
-      });
+    const credentials = db.getCredentialsByUser(userId);
+    const options = await generateAuthenticationOptions({
+      rpID: RP_ID,
+      timeout: 60000,
+      userVerification: 'preferred',
+      allowCredentials: credentials.map((cred) => ({
+        id: cred.credentialId,
+        type: 'public-key',
+        transports: cred.transports
+      }))
+    });
 
-      activeChallenges.set(`auth:${userId}`, options.challenge);
-      return res.json(options);
-    } catch (_error) {
-      return res.status(500).json({ error: 'Unable to generate passkey login options.' });
-    }
+    activeChallenges.set(`auth:${userId}`, options.challenge);
+    res.json(options);
   });
 
   app.post('/api/auth/webauthn/login/verify', async (req, res) => {
@@ -394,13 +359,8 @@ function createSaaSApp() {
         method: 'webauthn'
       });
 
-      if (verification.verified && verification.authenticationInfo?.newCounter !== undefined) {
-        db.updateCredentialCounter(authenticator.credentialId, verification.authenticationInfo.newCounter);
-      }
-
       activeChallenges.delete(`auth:${userId}`);
-      const fallbackRedirect = `http://localhost:${BANK_PORT}/dashboard.html?userId=${encodeURIComponent(userId)}`;
-      return res.json({ verified: verification.verified, redirectUrl: fallbackRedirect });
+      return res.json({ verified: verification.verified });
     } catch (error) {
       return res.status(400).json({ verified: false, error: 'WebAuthn verification failed.' });
     }

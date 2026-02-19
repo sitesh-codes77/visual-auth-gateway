@@ -3,7 +3,7 @@ const state = {
   challengeId: null,
   timeSlot: null,
   selectedPattern: [],
-  visualPattern: [],
+  visualPattern: ['🌅', '🌞', '🌻', '🌇', '🌆', '🌉', '🌙', '⭐', '🌠'],
   hintLevel: 0,
   maxHintLevel: 3,
   timerHandle: null,
@@ -29,10 +29,7 @@ const els = {
   hintSentence: document.getElementById('hint-sentence'),
   matrixCanvas: document.getElementById('matrix-canvas'),
   verifyVisual: document.getElementById('verify-visual'),
-  webauthnRegister: document.getElementById('webauthn-register'),
   webauthnLogin: document.getElementById('webauthn-login'),
-  traceBtn: document.getElementById('trace-btn'),
-  traceOutput: document.getElementById('trace-output'),
   faceId: document.getElementById('face-id'),
   loadPasswords: document.getElementById('load-passwords'),
   adminOutput: document.getElementById('admin-output')
@@ -58,8 +55,14 @@ function setStatus(message, isError = false) {
   els.status.classList.toggle('error', isError);
 }
 
-function shuffle(input) {
-  return [...input].sort(() => Math.random() - 0.5);
+function shuffle(array) {
+  let currentIndex = array.length, randomIndex;
+  while (currentIndex !== 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+  }
+  return array;
 }
 
 function drawMatrix(size, highlights = []) {
@@ -83,7 +86,7 @@ function drawMatrix(size, highlights = []) {
       ctx.strokeRect(x, y, cell, cell);
 
       if (isHighlight) {
-        ctx.fillStyle = 'rgba(110, 231, 183, 0.28)';
+        ctx.fillStyle = 'rgba(14, 165, 233, 0.28)';
         ctx.fillRect(x + 1, y + 1, cell - 2, cell - 2);
       }
 
@@ -122,11 +125,25 @@ function renderPatternPool() {
     btn.className = 'emoji-btn';
     btn.textContent = emoji;
     btn.setAttribute('aria-pressed', 'false');
-    btn.addEventListener('click', () => {
-      if (state.selectedPattern.length >= state.visualPattern.length) return;
-      state.selectedPattern.push(emoji);
+
+    // Disable if 3 items already selected
+    if (state.selectedPattern.length >= 3) {
+      btn.disabled = true;
+    }
+
+    // Highlight if selected
+    if (state.selectedPattern.includes(emoji)) {
+      btn.classList.add('active');
       btn.setAttribute('aria-pressed', 'true');
+    }
+
+    btn.addEventListener('click', () => {
+      if (state.selectedPattern.length >= 3) return;
+      if (state.selectedPattern.includes(emoji)) return; // Prevent double click
+
+      state.selectedPattern.push(emoji);
       renderSelectedPattern();
+      renderPatternPool(); // Re-render to disable other buttons
     });
     els.patternPool.appendChild(btn);
   });
@@ -137,81 +154,10 @@ function renderSelectedPattern() {
   state.selectedPattern.forEach((emoji, index) => {
     const chip = document.createElement('div');
     chip.className = 'emoji-pill';
-    chip.textContent = `${index + 1}. ${emoji}`;
+    chip.textContent = emoji;
+    chip.title = `Step ${index + 1}`;
     els.selectedPattern.appendChild(chip);
   });
-}
-
-
-function base64urlToBuffer(base64url) {
-  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
-  const binary = atob(padded);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
-
-function bufferToBase64url(buffer) {
-  const bytes = new Uint8Array(buffer);
-  let str = '';
-  bytes.forEach((b) => {
-    str += String.fromCharCode(b);
-  });
-  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-function prepareRegistrationOptions(options) {
-  return {
-    ...options,
-    challenge: base64urlToBuffer(options.challenge),
-    user: {
-      ...options.user,
-      id: base64urlToBuffer(options.user.id)
-    },
-    excludeCredentials: (options.excludeCredentials || []).map((item) => ({
-      ...item,
-      id: base64urlToBuffer(item.id)
-    }))
-  };
-}
-
-function prepareAuthenticationOptions(options) {
-  return {
-    ...options,
-    challenge: base64urlToBuffer(options.challenge),
-    allowCredentials: (options.allowCredentials || []).map((item) => ({
-      ...item,
-      id: base64urlToBuffer(item.id)
-    }))
-  };
-}
-
-function serializeCredential(credential) {
-  const response = credential.response;
-  const out = {
-    id: credential.id,
-    rawId: bufferToBase64url(credential.rawId),
-    type: credential.type,
-    clientExtensionResults: credential.getClientExtensionResults()
-  };
-
-  if (response.attestationObject) {
-    out.response = {
-      clientDataJSON: bufferToBase64url(response.clientDataJSON),
-      attestationObject: bufferToBase64url(response.attestationObject),
-      transports: typeof response.getTransports === 'function' ? response.getTransports() : []
-    };
-  } else {
-    out.response = {
-      clientDataJSON: bufferToBase64url(response.clientDataJSON),
-      authenticatorData: bufferToBase64url(response.authenticatorData),
-      signature: bufferToBase64url(response.signature),
-      userHandle: response.userHandle ? bufferToBase64url(response.userHandle) : null
-    };
-  }
-
-  return out;
 }
 
 async function apiJson(url, options = {}) {
@@ -250,7 +196,8 @@ els.authForm.addEventListener('submit', async (event) => {
 
     state.challengeId = data.challengeId;
     state.timeSlot = data.timeSlot;
-    state.visualPattern = data.visualPattern;
+    // We keep our fixed 9 emoji pool but verify against what the server sends
+    // The server currently sends 3 emojis for the correct pattern
     state.selectedPattern = [];
     state.hintLevel = 0;
     state.maxHintLevel = data.hints.max;
@@ -260,7 +207,7 @@ els.authForm.addEventListener('submit', async (event) => {
 
     els.slotIndicator.textContent = data.timeSlot.toUpperCase();
     els.hintSentence.textContent = data.sentence;
-    els.hintLevel.textContent = `Level ${state.hintLevel} / ${state.maxHintLevel}`;
+    els.hintLevel.textContent = `TRC Lvl: ${state.hintLevel}/${state.maxHintLevel}`;
     els.challenge.classList.remove('hidden');
 
     drawMatrix(state.matrixSize);
@@ -268,7 +215,7 @@ els.authForm.addEventListener('submit', async (event) => {
     renderSelectedPattern();
     startTimer();
 
-    setStatus('Challenge active. Select visual pattern or use fallback methods.');
+    setStatus('Challenge active. Select visual pattern sequence (3 emojis).');
   } catch (error) {
     setStatus(error.message, true);
   }
@@ -309,6 +256,11 @@ els.hintBtn.addEventListener('click', async () => {
 
 els.verifyVisual.addEventListener('click', async () => {
   try {
+    if (state.selectedPattern.length < 3) {
+      setStatus('Please select exactly 3 emojis.', true);
+      return;
+    }
+
     const data = await apiJson('/api/auth/verify-visual', {
       method: 'POST',
       body: JSON.stringify({ pattern: state.selectedPattern })
@@ -318,36 +270,10 @@ els.verifyVisual.addEventListener('click', async () => {
     window.location.href = data.redirectUrl;
   } catch (error) {
     setStatus(error.message, true);
-  }
-});
-
-els.webauthnRegister.addEventListener('click', async () => {
-  if (!window.PublicKeyCredential) {
-    setStatus('WebAuthn not supported on this browser.', true);
-    return;
-  }
-
-  try {
-    const options = await apiJson('/api/auth/webauthn/register/options', {
-      method: 'POST',
-      body: JSON.stringify({ userId: state.userId })
-    });
-
-    const credential = await navigator.credentials.create({
-      publicKey: prepareRegistrationOptions(options)
-    });
-
-    const verify = await apiJson('/api/auth/webauthn/register/verify', {
-      method: 'POST',
-      body: JSON.stringify({
-        userId: state.userId,
-        registrationResponse: serializeCredential(credential)
-      })
-    });
-
-    setStatus(verify.verified ? 'Passkey registered successfully.' : 'Passkey registration failed.', !verify.verified);
-  } catch (error) {
-    setStatus(error.message, true);
+    // Shuffle and reset after failure
+    state.selectedPattern = [];
+    renderSelectedPattern();
+    renderPatternPool();
   }
 });
 
@@ -363,25 +289,8 @@ els.webauthnLogin.addEventListener('click', async () => {
       body: JSON.stringify({ userId: state.userId })
     });
 
-    const assertion = await navigator.credentials.get({
-      publicKey: prepareAuthenticationOptions(options)
-    });
-
-    const verify = await apiJson('/api/auth/webauthn/login/verify', {
-      method: 'POST',
-      body: JSON.stringify({
-        userId: state.userId,
-        authenticationResponse: serializeCredential(assertion)
-      })
-    });
-
-    if (verify.verified) {
-      setStatus('Passkey login success. Redirecting...');
-      window.location.href = verify.redirectUrl;
-      return;
-    }
-
-    setStatus('Passkey login failed.', true);
+    setStatus('Passkey options loaded. Use browser authenticator to continue.');
+    console.info('WebAuthn options', options);
   } catch (error) {
     setStatus(error.message, true);
   }
@@ -402,16 +311,6 @@ els.faceId.addEventListener('click', async () => {
     }, 1200);
   } catch (error) {
     setStatus('Camera access denied.');
-  }
-});
-
-
-els.traceBtn.addEventListener('click', async () => {
-  try {
-    const data = await apiJson('/api/auth/trace');
-    els.traceOutput.textContent = JSON.stringify(data.trace, null, 2);
-  } catch (error) {
-    setStatus(error.message, true);
   }
 });
 
