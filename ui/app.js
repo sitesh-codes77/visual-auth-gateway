@@ -29,12 +29,12 @@ const els = {
   hintSentence: document.getElementById('hint-sentence'),
   matrixCanvas: document.getElementById('matrix-canvas'),
   verifyVisual: document.getElementById('verify-visual'),
+  registerPasskey: document.getElementById('register-passkey'),
   webauthnLogin: document.getElementById('webauthn-login'),
   faceId: document.getElementById('face-id'),
   loadPasswords: document.getElementById('load-passwords'),
   adminOutput: document.getElementById('admin-output')
 };
-
 
 function syncUserFromQuery() {
   const params = new URLSearchParams(window.location.search);
@@ -50,16 +50,18 @@ function syncUserFromQuery() {
   }
 }
 
-function setStatus(message, isError = false) {
+function setStatus(message, type = 'neutral') {
   els.status.textContent = message;
-  els.status.classList.toggle('error', isError);
+  els.status.classList.toggle('error', type === 'error');
+  els.status.classList.toggle('success', type === 'success');
 }
 
 function shuffle(array) {
-  let currentIndex = array.length, randomIndex;
+  let currentIndex = array.length;
+  let randomIndex;
   while (currentIndex !== 0) {
     randomIndex = Math.floor(Math.random() * currentIndex);
-    currentIndex--;
+    currentIndex -= 1;
     [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
   }
   return array;
@@ -108,7 +110,7 @@ function startTimer() {
     if (remainingMs <= 0) {
       clearInterval(state.timerHandle);
       els.sessionTimer.textContent = 'expired';
-      setStatus('Session expired. Start authentication again.', true);
+      setStatus('Session expired. Start authentication again.', 'error');
       return;
     }
     els.sessionTimer.textContent = `${Math.ceil(remainingMs / 1000)}s`;
@@ -126,12 +128,10 @@ function renderPatternPool() {
     btn.textContent = emoji;
     btn.setAttribute('aria-pressed', 'false');
 
-    // Disable if 3 items already selected
     if (state.selectedPattern.length >= 3) {
       btn.disabled = true;
     }
 
-    // Highlight if selected
     if (state.selectedPattern.includes(emoji)) {
       btn.classList.add('active');
       btn.setAttribute('aria-pressed', 'true');
@@ -139,11 +139,11 @@ function renderPatternPool() {
 
     btn.addEventListener('click', () => {
       if (state.selectedPattern.length >= 3) return;
-      if (state.selectedPattern.includes(emoji)) return; // Prevent double click
+      if (state.selectedPattern.includes(emoji)) return;
 
       state.selectedPattern.push(emoji);
       renderSelectedPattern();
-      renderPatternPool(); // Re-render to disable other buttons
+      renderPatternPool();
     });
     els.patternPool.appendChild(btn);
   });
@@ -158,6 +158,84 @@ function renderSelectedPattern() {
     chip.title = `Step ${index + 1}`;
     els.selectedPattern.appendChild(chip);
   });
+}
+
+function base64UrlToBuffer(base64url) {
+  const padLength = (4 - (base64url.length % 4)) % 4;
+  const base64 = (base64url + '='.repeat(padLength)).replace(/-/g, '+').replace(/_/g, '/');
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+function bufferToBase64Url(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i += 1) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function normalizeRegistrationOptions(options) {
+  return {
+    ...options,
+    challenge: base64UrlToBuffer(options.challenge),
+    user: {
+      ...options.user,
+      id: base64UrlToBuffer(options.user.id)
+    },
+    excludeCredentials: (options.excludeCredentials || []).map((cred) => ({
+      ...cred,
+      id: base64UrlToBuffer(cred.id)
+    }))
+  };
+}
+
+function normalizeAuthenticationOptions(options) {
+  return {
+    ...options,
+    challenge: base64UrlToBuffer(options.challenge),
+    allowCredentials: (options.allowCredentials || []).map((cred) => ({
+      ...cred,
+      id: base64UrlToBuffer(cred.id)
+    }))
+  };
+}
+
+function serializeCredential(rawCredential) {
+  if (typeof rawCredential.toJSON === 'function') {
+    return rawCredential.toJSON();
+  }
+
+  return {
+    id: rawCredential.id,
+    rawId: bufferToBase64Url(rawCredential.rawId),
+    type: rawCredential.type,
+    clientExtensionResults: rawCredential.getClientExtensionResults(),
+    response: {
+      attestationObject: rawCredential.response.attestationObject
+        ? bufferToBase64Url(rawCredential.response.attestationObject)
+        : undefined,
+      authenticatorData: rawCredential.response.authenticatorData
+        ? bufferToBase64Url(rawCredential.response.authenticatorData)
+        : undefined,
+      clientDataJSON: bufferToBase64Url(rawCredential.response.clientDataJSON),
+      signature: rawCredential.response.signature
+        ? bufferToBase64Url(rawCredential.response.signature)
+        : undefined,
+      userHandle: rawCredential.response.userHandle
+        ? bufferToBase64Url(rawCredential.response.userHandle)
+        : undefined,
+      transports: typeof rawCredential.response.getTransports === 'function'
+        ? rawCredential.response.getTransports()
+        : undefined
+    },
+    authenticatorAttachment: rawCredential.authenticatorAttachment
+  };
 }
 
 async function apiJson(url, options = {}) {
@@ -196,8 +274,6 @@ els.authForm.addEventListener('submit', async (event) => {
 
     state.challengeId = data.challengeId;
     state.timeSlot = data.timeSlot;
-    // We keep our fixed 9 emoji pool but verify against what the server sends
-    // The server currently sends 3 emojis for the correct pattern
     state.selectedPattern = [];
     state.hintLevel = 0;
     state.maxHintLevel = data.hints.max;
@@ -215,9 +291,9 @@ els.authForm.addEventListener('submit', async (event) => {
     renderSelectedPattern();
     startTimer();
 
-    setStatus('Challenge active. Select visual pattern sequence (3 emojis).');
+    setStatus('Challenge active. Select visual pattern sequence (3 emojis).', 'success');
   } catch (error) {
-    setStatus(error.message, true);
+    setStatus(error.message, 'error');
   }
 });
 
@@ -250,14 +326,14 @@ els.hintBtn.addEventListener('click', async () => {
 
     drawMatrix(state.matrixSize, state.hintLevel >= 2 ? state.revealedPositions : []);
   } catch (error) {
-    setStatus(error.message, true);
+    setStatus(error.message, 'error');
   }
 });
 
 els.verifyVisual.addEventListener('click', async () => {
   try {
     if (state.selectedPattern.length < 3) {
-      setStatus('Please select exactly 3 emojis.', true);
+      setStatus('Please select exactly 3 emojis.', 'error');
       return;
     }
 
@@ -266,51 +342,113 @@ els.verifyVisual.addEventListener('click', async () => {
       body: JSON.stringify({ pattern: state.selectedPattern })
     });
 
-    setStatus('Visual authentication successful. Redirecting to bank dashboard...');
+    setStatus('Visual authentication successful. Redirecting to bank dashboard...', 'success');
     window.location.href = data.redirectUrl;
   } catch (error) {
-    setStatus(error.message, true);
-    // Shuffle and reset after failure
+    setStatus(error.message, 'error');
     state.selectedPattern = [];
     renderSelectedPattern();
     renderPatternPool();
   }
 });
 
-els.webauthnLogin.addEventListener('click', async () => {
+els.registerPasskey.addEventListener('click', async () => {
   if (!window.PublicKeyCredential) {
-    setStatus('WebAuthn not supported on this browser.', true);
+    setStatus('Passkeys are not supported in this browser.', 'error');
     return;
   }
 
   try {
+    state.userId = els.userId.value.trim();
+    setStatus('Preparing passkey registration. If you have an NFC keychain, choose Security Key.');
+
+    const options = await apiJson('/api/auth/webauthn/register/options', {
+      method: 'POST',
+      body: JSON.stringify({
+        userId: state.userId,
+        authenticatorType: 'cross-platform'
+      })
+    });
+
+    const credential = await navigator.credentials.create({
+      publicKey: normalizeRegistrationOptions(options)
+    });
+
+    if (!credential) throw new Error('Passkey registration was cancelled.');
+
+    const verify = await apiJson('/api/auth/webauthn/register/verify', {
+      method: 'POST',
+      body: JSON.stringify({
+        userId: state.userId,
+        registrationResponse: serializeCredential(credential)
+      })
+    });
+
+    if (!verify.verified) throw new Error('Passkey registration could not be verified.');
+    setStatus('Passkey registered successfully. Your NFC keychain can now be used for login.', 'success');
+  } catch (error) {
+    setStatus(error.message, 'error');
+  }
+});
+
+els.webauthnLogin.addEventListener('click', async () => {
+  if (!window.PublicKeyCredential) {
+    setStatus('WebAuthn not supported on this browser.', 'error');
+    return;
+  }
+
+  try {
+    state.userId = els.userId.value.trim();
     const options = await apiJson('/api/auth/webauthn/login/options', {
       method: 'POST',
       body: JSON.stringify({ userId: state.userId })
     });
 
-    setStatus('Passkey options loaded. Use browser authenticator to continue.');
-    console.info('WebAuthn options', options);
+    setStatus('Touch your passkey. For NFC keychain, tap it when your phone/browser prompts.');
+
+    const assertion = await navigator.credentials.get({
+      publicKey: normalizeAuthenticationOptions(options)
+    });
+
+    if (!assertion) throw new Error('Passkey login was cancelled.');
+
+    const verification = await apiJson('/api/auth/webauthn/login/verify', {
+      method: 'POST',
+      body: JSON.stringify({
+        userId: state.userId,
+        authenticationResponse: serializeCredential(assertion)
+      })
+    });
+
+    if (!verification.verified) {
+      throw new Error('Passkey authentication failed.');
+    }
+
+    setStatus('Passkey verified. Redirecting...', 'success');
+    const redirectUrl = state.returnUrl || `http://localhost:8080/dashboard.html?userId=${encodeURIComponent(state.userId)}`;
+    setTimeout(() => {
+      window.location.href = redirectUrl;
+    }, 600);
   } catch (error) {
-    setStatus(error.message, true);
+    setStatus(error.message, 'error');
   }
 });
 
 els.faceId.addEventListener('click', async () => {
   if (!navigator.mediaDevices?.getUserMedia) {
-    setStatus('Face ID demo unavailable in this browser.', true);
+    setStatus('Face ID demo unavailable in this browser.', 'error');
     return;
   }
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    setStatus('Face ID demo camera check passed. Redirecting...');
+    setStatus('Face ID demo camera check passed. Redirecting...', 'success');
     setTimeout(() => {
       stream.getTracks().forEach((track) => track.stop());
       window.location.href = `http://localhost:8080/dashboard.html?userId=${encodeURIComponent(state.userId)}`;
     }, 1200);
-  } catch (error) {
-    setStatus('Camera access denied.');
+  } catch (_error) {
+    setStatus('Camera access denied.', 'error');
   }
 });
 
@@ -319,7 +457,7 @@ els.loadPasswords.addEventListener('click', async () => {
     const data = await apiJson(`/api/admin/passwords/${encodeURIComponent(state.userId || 'U123')}`);
     els.adminOutput.textContent = JSON.stringify(data, null, 2);
   } catch (error) {
-    setStatus(error.message, true);
+    setStatus(error.message, 'error');
   }
 });
 

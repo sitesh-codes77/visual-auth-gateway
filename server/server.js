@@ -22,6 +22,7 @@ const SESSION_TTL_MS = 60_000;
 const RP_NAME = 'VisualAuth SaaS';
 const RP_ID = process.env.RP_ID || 'localhost';
 const EXPECTED_ORIGIN = process.env.EXPECTED_ORIGIN || `http://localhost:${SaaSPort}`;
+const ALLOWED_RP_IDS = new Set((process.env.ALLOWED_RP_IDS || 'localhost,127.0.0.1').split(',').map((v) => v.trim()).filter(Boolean));
 
 db.init();
 
@@ -55,6 +56,32 @@ function sanitizePattern(input) {
     throw new Error('visualPattern must be an emoji array with 3-8 items.');
   }
   return input.map((item) => String(item).trim()).filter(Boolean);
+}
+
+
+function toWebAuthnUserId(userId) {
+  return new TextEncoder().encode(userId);
+}
+
+
+function resolveWebAuthnConfig(req) {
+  const originHeader = String(req.headers.origin || '').trim();
+  let expectedOrigin = EXPECTED_ORIGIN;
+  if (originHeader) {
+    try {
+      const parsedOrigin = new URL(originHeader);
+      if (ALLOWED_RP_IDS.has(parsedOrigin.hostname)) {
+        expectedOrigin = parsedOrigin.origin;
+      }
+    } catch (_error) {
+      expectedOrigin = EXPECTED_ORIGIN;
+    }
+  }
+
+  const requestedHost = String(req.hostname || '').trim();
+  const rpID = ALLOWED_RP_IDS.has(requestedHost) ? requestedHost : RP_ID;
+
+  return { rpID, expectedOrigin };
 }
 
 function parsePasswordRecord(password) {
@@ -249,6 +276,7 @@ function createSaaSApp() {
 
   app.post('/api/auth/webauthn/register/options', async (req, res) => {
     const userId = String(req.body.userId || '');
+    const authenticatorType = String(req.body.authenticatorType || 'cross-platform');
     if (!validateUserId(userId)) return res.status(400).json({ error: 'Invalid userId.' });
 
     const user = db.getUser(userId);
@@ -260,15 +288,17 @@ function createSaaSApp() {
       transports: cred.transports
     }));
 
+    const { rpID } = resolveWebAuthnConfig(req);
     const options = await generateRegistrationOptions({
       rpName: RP_NAME,
-      rpID: RP_ID,
-      userID: user.userId,
+      rpID,
+      userID: toWebAuthnUserId(user.userId),
       userName: user.name,
       timeout: 60000,
       attestationType: 'none',
       excludeCredentials: existing,
       authenticatorSelection: {
+        authenticatorAttachment: authenticatorType === 'platform' ? 'platform' : 'cross-platform',
         residentKey: 'preferred',
         userVerification: 'preferred'
       }
@@ -284,27 +314,34 @@ function createSaaSApp() {
     if (!expectedChallenge) return res.status(400).json({ error: 'No pending registration challenge.' });
 
     try {
+      const { rpID, expectedOrigin } = resolveWebAuthnConfig(req);
       const verification = await verifyRegistrationResponse({
         response: req.body.registrationResponse,
         expectedChallenge,
-        expectedOrigin: EXPECTED_ORIGIN,
-        expectedRPID: RP_ID
+        expectedOrigin,
+        expectedRPID: rpID
       });
 
       if (verification.verified && verification.registrationInfo) {
-        const { credential } = verification.registrationInfo;
+        const info = verification.registrationInfo;
+        const credentialId = info.credential?.id || info.credentialID;
+        const publicKeyBytes = info.credential?.publicKey || info.credentialPublicKey;
+        const counter = info.credential?.counter ?? info.counter ?? 0;
+        const transports = info.credential?.transports || req.body.registrationResponse?.response?.transports || [];
+
         db.upsertCredential({
           userId,
-          credentialId: credential.id,
-          publicKey: Buffer.from(credential.publicKey).toString('base64url'),
-          counter: credential.counter,
-          transports: credential.transports
+          credentialId,
+          publicKey: Buffer.from(publicKeyBytes).toString('base64url'),
+          counter,
+          transports
         });
       }
 
       activeChallenges.delete(`reg:${userId}`);
       return res.json({ verified: verification.verified });
     } catch (error) {
+      console.error('Registration verification failed:', error);
       return res.status(400).json({ verified: false, error: 'Registration verification failed.' });
     }
   });
@@ -314,8 +351,12 @@ function createSaaSApp() {
     if (!validateUserId(userId)) return res.status(400).json({ error: 'Invalid userId.' });
 
     const credentials = db.getCredentialsByUser(userId);
+    if (credentials.length === 0) {
+      return res.status(400).json({ error: 'No passkey registered. Register one first.' });
+    }
+    const { rpID } = resolveWebAuthnConfig(req);
     const options = await generateAuthenticationOptions({
-      rpID: RP_ID,
+      rpID,
       timeout: 60000,
       userVerification: 'preferred',
       allowCredentials: credentials.map((cred) => ({
@@ -339,11 +380,12 @@ function createSaaSApp() {
     if (!authenticator) return res.status(404).json({ error: 'Authenticator not found.' });
 
     try {
+      const { rpID, expectedOrigin } = resolveWebAuthnConfig(req);
       const verification = await verifyAuthenticationResponse({
         response: req.body.authenticationResponse,
         expectedChallenge: challenge,
-        expectedOrigin: EXPECTED_ORIGIN,
-        expectedRPID: RP_ID,
+        expectedOrigin,
+        expectedRPID: rpID,
         authenticator: {
           credentialID: authenticator.credentialId,
           credentialPublicKey: Buffer.from(authenticator.publicKey, 'base64url'),
@@ -359,9 +401,20 @@ function createSaaSApp() {
         method: 'webauthn'
       });
 
+      if (verification.verified) {
+        db.upsertCredential({
+          userId,
+          credentialId: authenticator.credentialId,
+          publicKey: authenticator.publicKey,
+          counter: verification.authenticationInfo.newCounter,
+          transports: authenticator.transports
+        });
+      }
+
       activeChallenges.delete(`auth:${userId}`);
       return res.json({ verified: verification.verified });
     } catch (error) {
+      console.error('Authentication verification failed:', error);
       return res.status(400).json({ verified: false, error: 'WebAuthn verification failed.' });
     }
   });

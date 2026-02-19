@@ -95,15 +95,27 @@
             <i class="fas fa-shield-check"></i>
             <span>Verify Pattern</span>
           </button>
-          <button id="webauthn-login" type="button" class="ghost">
+          <button id="register-passkey" type="button" class="ghost">
             <i class="fas fa-key"></i>
-            <span>Passkey</span>
+            <span>Create Passkey / NFC Key</span>
+          </button>
+          <button id="webauthn-login" type="button" class="ghost">
+            <i class="fas fa-unlock"></i>
+            <span>Use Passkey / NFC Tap</span>
           </button>
           <button id="face-id" type="button" class="ghost">
             <i class="fas fa-face-viewfinder"></i>
             <span>Face ID</span>
           </button>
         </div>
+
+        <section class="nfc-note">
+          <h4><i class="fas fa-wifi"></i> NFC Security Key Ready</h4>
+          <p class="muted">For your NFC keychain: click <strong>Create Passkey / NFC Key</strong> once, then use
+            <strong>Use Passkey / NFC Tap</strong> for future sign-ins. On mobile, hold the keychain near your phone
+            when prompted.
+          </p>
+        </section>
       </div>
 
       <section class="stack admin-panel">
